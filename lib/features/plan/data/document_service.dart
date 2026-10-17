@@ -359,9 +359,8 @@ class DocumentService extends ChangeNotifier {
     }
   }
 
-  // TODO(docs): add file_picker dependency to import arbitrary PDFs/files from
-  // the device file system. Currently only image capture/import (via
-  // image_picker) and generated PDFs (via pdf+printing) are supported.
+  // Current scope: image capture/import (image_picker) and generated PDFs
+  // (pdf package). Arbitrary filesystem imports are intentionally out of scope.
 
   /// Update metadata on an existing document. The underlying file is untouched.
   Future<void> updateMetadata(

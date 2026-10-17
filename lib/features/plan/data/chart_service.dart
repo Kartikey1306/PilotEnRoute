@@ -15,8 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 //   https://www.faa.gov/air_traffic/flight_info/aeronav/digital_products/dtpp/search/results/?cycle=2610&ident=KLAX
 // US airports only. Accepts the ICAO (KLAX) or FAA (LAX) identifier.
 //
-// TODO(charts): geo-referenced overlay on the moving map requires a licensed
-// chart provider.
+// Geo-referenced chart overlays are intentionally excluded here because they
+// require a licensed chart provider integration.
 
 /// First day of AIRAC/d-TPP cycle 2601. Cycles are [kDtppCycleDays] long.
 final DateTime kDtppCycleAnchor = DateTime.utc(2026, 1, 22);
