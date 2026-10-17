@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/services/ad_service.dart';
+import 'package:pilot_enroute/core/services/ad_service.dart';
 
 // Firebase caps apps per project, so the 43 apps are split across three
 // AGL projects. The guard that matters is that the config belongs to one of
@@ -254,7 +254,7 @@ void main() {
               reason: '${f.path} hard-codes a non-test ad unit');
         }
       }
-      final service = read('lib/services/ad_service.dart');
+      final service = read('lib/core/services/ad_service.dart');
       for (final key in const [
         'ADMOB_BANNER_ANDROID',
         'ADMOB_BANNER_IOS',
@@ -267,7 +267,7 @@ void main() {
       }
       // The places that would otherwise reach the SDK still consult the gate.
       expect(service, contains('adsAllowedForThisBuild'));
-      expect(read('lib/widgets/ad_banner_widget.dart'),
+      expect(read('lib/shared/widgets/ad_banner_widget.dart'),
           contains('AdUnitIds.banner == null'),
           reason: 'the banner slot would reserve 52px for an ad that is '
               'never requested');

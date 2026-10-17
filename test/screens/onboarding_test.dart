@@ -8,8 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pilot_enroute/core/legality/pilot_profile.dart';
-import 'package:pilot_enroute/screens/onboarding_screen.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 
 import '../support/awc_fixtures.dart';
 import '../support/harness.dart';

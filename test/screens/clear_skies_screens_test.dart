@@ -8,17 +8,17 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pilot_enroute/core/legality/pilot_profile.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
-import 'package:pilot_enroute/screens/airport_ops_screen.dart';
-import 'package:pilot_enroute/screens/home_screen.dart';
-import 'package:pilot_enroute/screens/learn_screen.dart';
-import 'package:pilot_enroute/screens/library_screen.dart';
-import 'package:pilot_enroute/screens/plan_screen.dart';
-import 'package:pilot_enroute/screens/six_pack_screen.dart';
-import 'package:pilot_enroute/screens/today_screen.dart';
-import 'package:pilot_enroute/services/logbook_service.dart';
-import 'package:pilot_enroute/services/practice_store.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
+import 'package:pilot_enroute/features/learn/presentation/airport_ops_screen.dart';
+import 'package:pilot_enroute/features/home/presentation/home_screen.dart';
+import 'package:pilot_enroute/features/learn/presentation/learn_screen.dart';
+import 'package:pilot_enroute/features/learn/presentation/library_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/plan_screen.dart';
+import 'package:pilot_enroute/features/learn/presentation/six_pack_screen.dart';
+import 'package:pilot_enroute/features/home/presentation/today_screen.dart';
+import 'package:pilot_enroute/data/repositories/logbook_service.dart';
+import 'package:pilot_enroute/data/repositories/practice_store.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 
 import '../support/awc_fixtures.dart';
 import '../support/harness.dart';

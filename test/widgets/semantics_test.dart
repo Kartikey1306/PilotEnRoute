@@ -12,11 +12,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pilot_enroute/screens/checklist_screen.dart';
-import 'package:pilot_enroute/screens/fuel_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/checklist_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/fuel_screen.dart';
 import 'package:pilot_enroute/core/legality/legality_engine.dart';
 import 'package:pilot_enroute/core/minimums/minimums_check.dart';
-import 'package:pilot_enroute/ui/status_tag.dart';
+import 'package:pilot_enroute/shared/widgets/status_tag.dart';
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));

@@ -11,9 +11,9 @@ import 'package:pilot_enroute/core/legality/legality_engine.dart';
 import 'package:pilot_enroute/core/legality/pilot_profile.dart';
 import 'package:pilot_enroute/core/minimums/personal_minimums.dart';
 import 'package:pilot_enroute/core/reminders/reminder_plan.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
-import 'package:pilot_enroute/services/logbook_service.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_service.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

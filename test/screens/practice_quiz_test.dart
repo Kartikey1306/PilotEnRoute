@@ -8,11 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pilot_enroute/content/faa_questions.g.dart';
-import 'package:pilot_enroute/content/knowledge_question.dart';
-import 'package:pilot_enroute/screens/practice_screen.dart';
-import 'package:pilot_enroute/screens/quiz_screen.dart';
-import 'package:pilot_enroute/services/practice_store.dart';
+import 'package:pilot_enroute/data/content/faa_questions.g.dart';
+import 'package:pilot_enroute/data/content/knowledge_question.dart';
+import 'package:pilot_enroute/features/practice/presentation/practice_screen.dart';
+import 'package:pilot_enroute/features/practice/presentation/quiz_screen.dart';
+import 'package:pilot_enroute/data/repositories/practice_store.dart';
 
 import '../support/harness.dart';
 

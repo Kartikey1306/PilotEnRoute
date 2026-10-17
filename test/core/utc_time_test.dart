@@ -22,7 +22,7 @@ import 'package:pilot_enroute/core/logbook/logbook_entry.dart';
 import 'package:pilot_enroute/core/minimums/go_check.dart';
 import 'package:pilot_enroute/core/minimums/personal_minimums.dart';
 import 'package:pilot_enroute/core/weather/awc_models.dart';
-import 'package:pilot_enroute/services/flight_plan_service.dart';
+import 'package:pilot_enroute/features/plan/data/flight_plan_service.dart';
 
 import '../support/awc_fixtures.dart';
 

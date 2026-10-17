@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pilot_enroute/core/logbook/logbook_entry.dart';
 import 'package:pilot_enroute/core/minimums/go_check.dart';
 import 'package:pilot_enroute/core/minimums/go_record.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

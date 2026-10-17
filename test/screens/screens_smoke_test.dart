@@ -5,20 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pilot_enroute/screens/airport_screen.dart';
-import 'package:pilot_enroute/screens/checklist_screen.dart';
-import 'package:pilot_enroute/screens/flight_plan_screen.dart';
-import 'package:pilot_enroute/screens/go_history_screen.dart';
-import 'package:pilot_enroute/screens/plan_screen.dart';
-import 'package:pilot_enroute/screens/logbook_entry_screen.dart';
-import 'package:pilot_enroute/screens/logbook_screen.dart';
-import 'package:pilot_enroute/screens/minimums_screen.dart';
-import 'package:pilot_enroute/screens/onboarding_screen.dart';
-import 'package:pilot_enroute/screens/profile_screen.dart';
-import 'package:pilot_enroute/screens/reminders_screen.dart';
-import 'package:pilot_enroute/screens/settings_screen.dart';
-import 'package:pilot_enroute/screens/today_screen.dart';
-import 'package:pilot_enroute/screens/weather_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/airport_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/checklist_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/flight_plan_screen.dart';
+import 'package:pilot_enroute/features/home/presentation/go_history_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/plan_screen.dart';
+import 'package:pilot_enroute/features/logbook/presentation/logbook_entry_screen.dart';
+import 'package:pilot_enroute/features/logbook/presentation/logbook_screen.dart';
+import 'package:pilot_enroute/features/settings/presentation/minimums_screen.dart';
+import 'package:pilot_enroute/features/onboarding/presentation/onboarding_screen.dart';
+import 'package:pilot_enroute/features/profile/presentation/profile_screen.dart';
+import 'package:pilot_enroute/features/settings/presentation/reminders_screen.dart';
+import 'package:pilot_enroute/features/settings/presentation/settings_screen.dart';
+import 'package:pilot_enroute/features/home/presentation/today_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/weather_screen.dart';
 
 import '../support/harness.dart';
 

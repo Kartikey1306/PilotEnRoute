@@ -16,11 +16,11 @@ Logbook**. Home is first; the Go Card (`/go`) opens from Home and Plan.
 Content is data with provenance, not prose in widgets: `content/*.json`
 records each FAA document (number, edition, URL, sha256 of the file read) and
 every line's page/paragraph; `tools/gen_content.py` compiles it to
-`lib/content/*.g.dart` (offline, testable). `test/content/sourced_content_test.dart`
+`lib/data/content/*.g.dart` (offline, testable). `test/content/sourced_content_test.dart`
 fails if the Dart is stale, a line has no cite, or anything says "safe".
 
 - Six-pack trainer: PHAK FAA-H-8083-25C ch. 8; generic dials
-  (`lib/ui/instruments.dart`), the POH/AFM gives real speeds.
+  (`lib/features/learn/presentation/instruments.dart`), the POH/AFM gives real speeds.
 - Airport operations: AIM 2-3 and 4-3 (Change 3, 7/9/2026). The 45° entry is
   shown only in an AIM figure we did not check, so it is not drawn.
 - FAA library: 13 documents checked HTTP 200 on 2026-10-17; opened in the
@@ -36,10 +36,11 @@ fails if the Dart is stale, a line has no cite, or anything says "safe".
 ## Layers
 | Layer | Contents | Rule |
 |---|---|---|
-| `lib/core/` | legality engine, AWC decoding, minimums/Go verdict, logbook query/CSV/validation, reminder plan | Pure Dart, no Flutter import, dates injected — all unit-tested |
-| `lib/data/` | SQLite schema and migrations, in-memory store | `sqflite` only |
-| `lib/services/` | `ChangeNotifier`s the UI watches; the AWC HTTP client; notification plugin seams | Thin |
-| `lib/screens/`, `lib/ui/` | Widgets, theme | No business rules |
+| `lib/core/{legality,weather,minimums,logbook,reminders}/` | legality engine, AWC decoding, minimums/Go verdict, logbook query/CSV/validation, reminder plan | Pure Dart, no Flutter import, dates injected — all unit-tested |
+| `lib/core/{theme,router,services,errors,config}/` | theme, 5-tab shell, ads/notifications, error reporting, build env | App infrastructure; Flutter allowed |
+| `lib/data/` | `repositories/`: SQLite store and the `ChangeNotifier` services several features share; `content/`: generated sourced content | Thin |
+| `lib/features/<feature>/data/` | Services only one feature uses | Thin |
+| `lib/features/<feature>/presentation/`, `lib/shared/widgets/` | Screens and reusable widgets | No business rules |
 
 ## Legality engine (`lib/core/legality/legality_engine.dart`)
 Inputs: entries, `PilotProfile`, `PlannedFlight` (date, category/class,
@@ -121,18 +122,18 @@ change and cancels the previous ids first.
   `stopSoft`). Every text colour is ≥ 4.5:1 on cards and canvas (tested).
   Dark: canvas `#0B1621`, cards `#132331`, ink `#E6EEF5`, teal `#4CC3D0`.
   Hand-built `ColorScheme` (`skyLightScheme` / `skyDarkScheme`), tokens in
-  `Sky` (`lib/ui/theme.dart`).
+  `Sky` (`lib/core/theme/theme.dart`).
 - Shape: 16 px cards (`Sky.radius`), 12 px inputs and tiles (`radiusM`),
   22 px hero panels and sheets (`radiusL`), pill chips, pill nav indicator,
   14 px buttons (52 px tall primary). Cards carry a hairline border and a
   soft two-layer shadow (`Sky.shadow`).
-- Building blocks (`lib/ui/widgets.dart`): `SkyCard` (`PlacardCard` is
+- Building blocks (`lib/shared/widgets/widgets.dart`): `SkyCard` (`PlacardCard` is
   kept as an alias), `PageTitle` (large title + caption in the app bar),
   `SectionHeader` (sentence case), `IconTile`, `NavRowCard` (tile + title +
   caption + chevron), `StatTile`, `ProgressStrip`, `SegmentedTabBar` (a
   TabBar on a rounded track — the theme's tab indicator is a teal pill),
   `NoticeLine`, `MonoBlock`.
-- Hero illustration: `SkyScene` (`lib/ui/sky_scene.dart`) — a flat,
+- Hero illustration: `SkyScene` (`lib/shared/widgets/sky_scene.dart`) — a flat,
   layered CustomPainter scene of a high-wing trainer over hills and a lake.
   No photos, no network, no gradients. Mood follows the planned flight:
   `night` when Night is on, `overcast` when the result is outside minimums.

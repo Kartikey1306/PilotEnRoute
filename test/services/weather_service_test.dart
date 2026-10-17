@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/services/weather_service.dart';
+import 'package:pilot_enroute/data/repositories/weather_service.dart';
 
 void main() {
   group('WeatherService', () {

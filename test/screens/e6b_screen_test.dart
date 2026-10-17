@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/screens/e6b_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/e6b_screen.dart';
 
 /// Opens the E6B on the tab whose label is [tab]. The surface is widened so
 /// the scrollable TabBar shows all six tabs at once.

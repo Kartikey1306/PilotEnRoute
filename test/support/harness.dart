@@ -3,14 +3,14 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
-import 'package:pilot_enroute/services/flight_plan_service.dart';
-import 'package:pilot_enroute/services/logbook_service.dart';
-import 'package:pilot_enroute/services/practice_store.dart';
-import 'package:pilot_enroute/services/reminder_service.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
-import 'package:pilot_enroute/services/weather_service.dart';
-import 'package:pilot_enroute/ui/theme.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
+import 'package:pilot_enroute/features/plan/data/flight_plan_service.dart';
+import 'package:pilot_enroute/data/repositories/logbook_service.dart';
+import 'package:pilot_enroute/data/repositories/practice_store.dart';
+import 'package:pilot_enroute/features/settings/data/reminder_service.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/weather_service.dart';
+import 'package:pilot_enroute/core/theme/theme.dart';
 
 class Harness {
   Harness(

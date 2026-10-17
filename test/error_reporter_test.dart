@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/services/error_reporter.dart';
+import 'package:pilot_enroute/core/errors/error_reporter.dart';
 
 /// Guards the app's only route for uncaught errors.
 ///

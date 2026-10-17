@@ -24,7 +24,7 @@ import 'package:pilot_enroute/core/legality/pilot_profile.dart';
 import 'package:pilot_enroute/core/logbook/logbook_csv.dart';
 import 'package:pilot_enroute/core/logbook/logbook_entry.dart';
 import 'package:pilot_enroute/main.dart' as app;
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

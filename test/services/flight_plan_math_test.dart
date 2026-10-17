@@ -9,7 +9,7 @@ library;
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/services/flight_plan_service.dart';
+import 'package:pilot_enroute/features/plan/data/flight_plan_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Waypoint wp(String id, double lat, double lon) =>

@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pilot_enroute/core/minimums/minimums_check.dart';
-import 'package:pilot_enroute/ui/status_tag.dart';
-import 'package:pilot_enroute/ui/theme.dart';
+import 'package:pilot_enroute/shared/widgets/status_tag.dart';
+import 'package:pilot_enroute/core/theme/theme.dart';
 
 void main() {
   group('palette', () {
@@ -75,7 +75,7 @@ void main() {
     });
 
     test('the scheme is hand-built, not derived from a seed', () {
-      final src = File('lib/ui/theme.dart').readAsStringSync();
+      final src = File('lib/core/theme/theme.dart').readAsStringSync();
       expect(src, isNot(contains('ColorScheme.fromSeed(')));
       expect(src, contains('const ColorScheme skyLightScheme = ColorScheme('));
     });

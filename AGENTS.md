@@ -62,13 +62,15 @@ are pushed routes. Kit tools are named routes (`onGenerateRoute`) wrapped in `Pa
 | `lib/core/legality/private_pilot_progress.dart` | 61.109(a) student progress (pure Dart, eCFR text quoted) |
 | `lib/core/minimums/solar.dart` | NOAA sunrise/sunset, 61.57(b) night window |
 | `lib/core/reminders/` | Which lapse reminders exist (30 and 7 days before each date) |
-| `lib/data/logbook_store.dart` | SQLite schema v2 + v1→v2 migration, memory store for web/tests |
-| `lib/services/` | `logbook_service`, `weather_service` (AWC client), `settings_store`, `reminder_service`, `notification_service`, `ad_service`, kit services |
-| `lib/screens/` | home, learn (library, six_pack, airport_ops), practice + quiz, plan (Kit tools), today (Go Card), logbook, logbook_entry, weather, airport, settings, profile, minimums, reminders, go_history, onboarding + kit tools |
-| `content/*.json` → `lib/content/*.g.dart` | Sourced Learn/Practice content (FAA doc, edition, URL, sha256). `python3 tools/gen_content.py` regenerates; a test fails if stale |
-| `lib/services/practice_store.dart` | The pilot's practice answers, readiness, topic scores, missed questions |
-| `lib/ui/instruments.dart` | Flat painters for the six instruments |
-| `lib/ui/` | `theme.dart` ("Clear Skies" `Sky` tokens, fonts, `buildSkyTheme`, `PanelTheme`), `status_tag.dart` (status pills), `widgets.dart` (`SkyCard`, `PageTitle`, `NavRowCard`, `IconTile`, `StatTile`, `ProgressStrip`, `SegmentedTabBar`…), `sky_scene.dart` (hero illustration) |
+| `lib/data/repositories/logbook_store.dart` | SQLite schema v2 + v1→v2 migration, memory store for web/tests |
+| `lib/data/repositories/` | `logbook_service`, `weather_service` (AWC client), `settings_store`, `practice_store`, `logbook_store` — used by several features |
+| `lib/core/services/`, `lib/core/errors/`, `lib/core/router/`, `lib/core/config/` | `notification_service`, `ad_service`, `error_reporter`, `app_shell` (5-tab shell), `app_env` |
+| `lib/features/<tab>/data/` | Feature-only services: plan (`chart_service`, `document_service`, `flight_plan_service`, `weight_balance_service`), settings (`reminder_service`) |
+| `lib/features/<feature>/presentation/` | home (home, today/Go Card, go_history), learn (learn, library, six_pack, airport_ops), practice (practice, quiz), plan (plan + Kit tools, weather, airport, charts, documents), logbook (logbook, logbook_entry, student_progress), profile, settings (settings, minimums, reminders), onboarding |
+| `content/*.json` → `lib/data/content/*.g.dart` | Sourced Learn/Practice content (FAA doc, edition, URL, sha256). `python3 tools/gen_content.py` regenerates; a test fails if stale |
+| `lib/data/repositories/practice_store.dart` | The pilot's practice answers, readiness, topic scores, missed questions |
+| `lib/features/learn/presentation/instruments.dart` | Flat painters for the six instruments |
+| `lib/core/theme/theme.dart`, `lib/shared/widgets/` | `theme.dart` ("Clear Skies" `Sky` tokens, fonts, `buildSkyTheme`, `PanelTheme`), `status_tag.dart` (status pills), `widgets.dart` (`SkyCard`, `PageTitle`, `NavRowCard`, `IconTile`, `StatTile`, `ProgressStrip`, `SegmentedTabBar`…), `sky_scene.dart` (hero illustration) |
 | `assets/fonts/` | Sofia Sans Condensed, Sofia Sans, Fira Mono + OFL licences |
 | `assets/logo/` | Tag icon/mark SVG sources and rendered PNGs |
 | `test/fixtures/awc/` | Recorded real AWC answers with UTC capture time |
@@ -83,7 +85,7 @@ windtemp) — keyless; a 5xx is retried once. No Supabase, no account, no other 
 | A currency rule | `lib/core/legality/legality_engine.dart` + `test/core/legality_engine_test.dart` |
 | Go Card wording | `lib/core/minimums/go_check.dart`, `minimums_check.dart` |
 | Logbook columns | `LogbookEntry` + `v2Columns`/a new migration in `logbook_store.dart` (bump `logbookSchemaVersion`) |
-| Theme | `lib/ui/theme.dart` |
+| Theme | `lib/core/theme/theme.dart` |
 | 61.109(a) progress rules | `private_pilot_progress.dart` + `test/core/private_pilot_progress_test.dart` |
 | CSV import | `logbookFromCsv` in `logbook_csv.dart` + `test/core/logbook_csv_import_test.dart` |
 | Kit "About" text | `PlanScreen.explanations` |

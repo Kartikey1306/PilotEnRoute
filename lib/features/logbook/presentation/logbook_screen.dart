@@ -1,0 +1,773 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/legality/date_text.dart';
+import '../../../core/logbook/logbook_csv.dart';
+import '../../../core/logbook/logbook_query.dart';
+import '../../../data/repositories/logbook_service.dart';
+import '../../../data/repositories/settings_store.dart';
+import '../../../core/theme/theme.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../../../shared/widgets/ad_banner_widget.dart';
+import 'logbook_entry_screen.dart';
+import 'student_progress_screen.dart';
+
+/// The logbook: a ruled ledger grouped by month, with search, filters,
+/// window totals and export (PDF, Share PDF, Copy as CSV).
+class LogbookScreen extends StatefulWidget {
+  const LogbookScreen({super.key, this.clock});
+
+  final DateTime Function()? clock;
+
+  /// The in-list banner goes after this many rows.
+  static const adAfterRow = 5;
+
+  @override
+  State<LogbookScreen> createState() => _LogbookScreenState();
+}
+
+class _LogbookScreenState extends State<LogbookScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 2, vsync: this);
+  final _search = TextEditingController();
+  LogbookQuery _query = LogbookQuery.all;
+  bool _busy = false;
+
+  /// Rows swiped away but not yet gone from the store. A dismissed
+  /// Dismissible must leave the tree in the same frame.
+  final Set<int> _pendingDeletes = {};
+
+  DateTime _now() => (widget.clock ?? DateTime.now)();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<LogbookService>().init();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabs.dispose();
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openEntry({LogbookEntry? existing}) async {
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => LogbookEntryScreen(existing: existing, clock: widget.clock),
+      fullscreenDialog: existing == null,
+    ));
+  }
+
+  Future<void> _export(String action, LogbookService svc) async {
+    // One export or import at a time: a second paste during an import would
+    // check duplicates against the list as it was before the first.
+    if (_busy) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (action == 'paste') {
+      await _pasteCsv(svc);
+      return;
+    }
+    if (action == 'csv') {
+      await Clipboard.setData(ClipboardData(text: svc.toCsv()));
+      messenger.showSnackBar(SnackBar(
+          content: Text('Copied ${svc.entries.length} '
+              'flight${svc.entries.length == 1 ? '' : 's'} as CSV')));
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      final bytes = await svc.buildLogbookPdf();
+      if (action == 'share') {
+        await Printing.sharePdf(bytes: bytes, filename: 'pilot_logbook.pdf');
+      } else {
+        await Printing.layoutPdf(
+            onLayout: (_) async => bytes, name: 'pilot_logbook.pdf');
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text('Could not export the logbook PDF: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// "Paste CSV": reads text made by "Copy as CSV" (on this or another
+  /// device) and adds the flights that are not already in the logbook.
+  Future<void> _pasteCsv(LogbookService svc) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final result =
+        logbookFromCsv(data?.text ?? '', existing: svc.entries);
+    if (!mounted) return;
+    if (result.fatal != null) {
+      messenger.showSnackBar(SnackBar(content: Text(result.fatal!)));
+      return;
+    }
+    final n = result.entries.length;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        key: const Key('paste-csv-dialog'),
+        title: const Text('Paste CSV'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$n flight${n == 1 ? '' : 's'} to add.'),
+              if (result.duplicates > 0)
+                Text('${result.duplicates} already in your logbook '
+                    '(skipped).'),
+              if (result.errors.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('${result.errors.length} row'
+                    '${result.errors.length == 1 ? '' : 's'} not read:'),
+                for (final e in result.errors.take(5))
+                  Text('• $e', style: const TextStyle(fontSize: 13)),
+                if (result.errors.length > 5)
+                  Text('…and ${result.errors.length - 5} more.'),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: n == 0 ? null : () => Navigator.pop(ctx, true),
+              child: Text(n == 0 ? 'Nothing to add' : 'Add $n')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await svc.importEntries(result.entries);
+      messenger.showSnackBar(SnackBar(
+          content: Text('Added $n flight${n == 1 ? '' : 's'} from CSV')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Paste CSV: $e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete(LogbookEntry e, LogbookService svc) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _pendingDeletes.add(e.id!));
+    await svc.deleteEntry(e.id!);
+    if (mounted) setState(() => _pendingDeletes.remove(e.id));
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text('Deleted ${e.from}→${e.to} on ${dayMonthYear(e.date)}'),
+      duration: const Duration(seconds: 6),
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () => svc.restoreEntry(e),
+      ),
+    ));
+  }
+
+  Future<void> _filters() async {
+    final q = await showModalBottomSheet<LogbookQuery>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _FilterSheet(initial: _query),
+    );
+    if (q != null) setState(() => _query = q.copyWith(text: _search.text));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final svc = context.watch<LogbookService>();
+    return Scaffold(
+      appBar: AppBar(
+        toolbarHeight: 78,
+        titleSpacing: 20,
+        title: PageTitle('Logbook',
+            subtitle: '${svc.entries.length} '
+                'flight${svc.entries.length == 1 ? '' : 's'} · '
+                '${totalsWithin(svc.entries, now: _now(), days: null).totalTime.toStringAsFixed(1)} h total'),
+        actions: [
+          if (_busy)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          PopupMenuButton<String>(
+            tooltip: 'Export',
+            enabled: !_busy,
+            icon: const Icon(Icons.ios_share_rounded),
+            style: IconButton.styleFrom(
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerLowest,
+              side: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant),
+              fixedSize: const Size(44, 44),
+            ),
+            onSelected: (a) => _export(a, svc),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                  value: 'pdf',
+                  child: ListTile(
+                      leading: Icon(Icons.picture_as_pdf_outlined),
+                      title: Text('Print or save PDF'))),
+              PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                      leading: Icon(Icons.share_outlined),
+                      title: Text('Share PDF'))),
+              PopupMenuItem(
+                  value: 'csv',
+                  child: ListTile(
+                      leading: Icon(Icons.table_chart_outlined),
+                      title: Text('Copy as CSV'))),
+              PopupMenuItem(
+                  value: 'paste',
+                  child: ListTile(
+                      leading: Icon(Icons.content_paste_outlined),
+                      title: Text('Paste CSV'))),
+            ],
+          ),
+          const SizedBox(width: 16),
+        ],
+        bottom: SegmentedTabBar(
+          controller: _tabs,
+          tabs: const [Tab(text: 'Flights'), Tab(text: 'Totals')],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openEntry(),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Log flight',
+            style: TextStyle(
+                fontFamily: AppFonts.heading,
+                fontWeight: FontWeight.w700,
+                fontSize: 15.5)),
+      ),
+      body: TabBarView(
+        controller: _tabs,
+        children: [
+          _flights(context, svc),
+          _totals(context, svc),
+        ],
+      ),
+    );
+  }
+
+  Widget _flights(BuildContext context, LogbookService svc) {
+    final scheme = Theme.of(context).colorScheme;
+    if (svc.isLoading && !svc.ready) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final filtered = filterEntries(
+        svc.entries.where((e) => !_pendingDeletes.contains(e.id)).toList(),
+        _query);
+    final groups = groupByMonth(filtered);
+    final rows = <Widget>[];
+    var row = 0;
+    for (final g in groups) {
+      rows.add(_monthHeader(context, g));
+      for (final e in g.entries) {
+        rows.add(_ledgerRow(context, e, svc));
+        row++;
+        if (row == LogbookScreen.adAfterRow) {
+          rows.add(const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: AdBannerWidget(),
+          ));
+        }
+      }
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('logbook-search'),
+                  controller: _search,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Airport, tail, type, remarks',
+                    suffixIcon: _search.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Clear search',
+                            icon: const Icon(Icons.clear),
+                            onPressed: () => setState(() {
+                              _search.clear();
+                              _query = _query.copyWith(text: '');
+                            }),
+                          ),
+                  ),
+                  onChanged: (t) =>
+                      setState(() => _query = _query.copyWith(text: t)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Badge(
+                isLabelVisible: _query.filterCount > 0,
+                label: Text('${_query.filterCount}'),
+                child: IconButton.outlined(
+                  tooltip: 'Filters',
+                  icon: const Icon(Icons.tune_rounded),
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(50, 50),
+                    backgroundColor: scheme.surfaceContainerLowest,
+                    side: BorderSide(color: scheme.outlineVariant),
+                    shape: const RoundedRectangleBorder(
+                        borderRadius: Sky.cornersM),
+                  ),
+                  onPressed: _filters,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (svc.error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: NoticeLine(icon: Icons.error_outline, text: svc.error!),
+          ),
+        Expanded(
+          child: svc.entries.isEmpty
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: const [
+                    NoticeLine(
+                      icon: Icons.menu_book_outlined,
+                      text: 'No flights logged yet. Tap "Log flight" to add '
+                          'your recent flights; the Go Card works out your '
+                          'currency from them.',
+                    ),
+                  ],
+                )
+              : filtered.isEmpty
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        NoticeLine(
+                          icon: Icons.search_off,
+                          text: 'No flights match. ${svc.entries.length} in '
+                              'the logbook.',
+                          action: TextButton(
+                            onPressed: () => setState(() {
+                              _search.clear();
+                              _query = LogbookQuery.all;
+                            }),
+                            child: const Text('Clear search and filters'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 96),
+                      children: [
+                        _summary(context, svc),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 16, 2),
+                          child: Text(
+                            '${filtered.length} of ${svc.entries.length} '
+                            'flights · swipe left to delete',
+                            style: TextStyle(
+                                fontSize: 12, color: scheme.onSurfaceVariant),
+                          ),
+                        ),
+                        ...rows,
+                      ],
+                    ),
+        ),
+      ],
+    );
+  }
+
+  Widget _summary(BuildContext context, LogbookService svc) {
+    final now = _now();
+    final d30 = totalsWithin(svc.entries, now: now, days: 30);
+    final d90 = totalsWithin(svc.entries, now: now, days: 90);
+    final all = totalsWithin(svc.entries, now: now, days: null);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: SkyCard(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Expanded(
+                child: StatTile(
+                    label: 'Hours\nlast 30 days',
+                    value: d30.totalTime.toStringAsFixed(1),
+                    unit: 'h')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: StatTile(
+                    label: 'Landings\nlast 90 days',
+                    value: '${d90.dayLandings + d90.nightLandings}')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: StatTile(
+                    label: 'Night\nall time',
+                    value: all.night.toStringAsFixed(1),
+                    unit: 'h')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _monthHeader(BuildContext context, MonthGroup g) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 16, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(monthYear(g.month).toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontFamily: AppFonts.heading,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                    letterSpacing: 1.2)),
+          ),
+          Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: ShapeDecoration(
+                  color: scheme.primaryContainer, shape: const StadiumBorder()),
+              child: Text(
+                  '${g.entries.length} · ${g.hours.toStringAsFixed(1)} h',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontFamily: AppFonts.mono,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onPrimaryContainer)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _ledgerRow(BuildContext context, LogbookEntry e, LogbookService svc) {
+    final scheme = Theme.of(context).colorScheme;
+    const mono = TextStyle(fontFamily: AppFonts.mono, fontSize: 13);
+    final flags = [
+      if (e.isNight) 'N',
+      if (e.isIfr) 'IFR',
+      if (e.flightReview) 'FR',
+      if (e.ipc) 'IPC',
+      if (e.practicalTest) 'PT',
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Dismissible(
+        key: ValueKey('entry-${e.id}'),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          decoration: BoxDecoration(
+            color: scheme.error,
+            borderRadius: Sky.corners,
+          ),
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_outline, color: scheme.onError),
+              const SizedBox(width: 6),
+              Text('Delete', style: TextStyle(color: scheme.onError)),
+            ],
+          ),
+        ),
+        onDismissed: (_) => _delete(e, svc),
+        child: SkyCard(
+          onTap: () => _openEntry(existing: e),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Sky.tileOf(context),
+                  borderRadius: Sky.cornersM,
+                ),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(4),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '${e.date.day.toString().padLeft(2, '0')}\n'
+                    '${monthYear(e.date).substring(0, 3).toUpperCase()}',
+                    textAlign: TextAlign.center,
+                    style: mono.copyWith(
+                        height: 1.15,
+                        fontWeight: FontWeight.w700,
+                        color: Sky.tileInkOf(context)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${e.from.isEmpty ? '----' : e.from} → '
+                        '${e.to.isEmpty ? '----' : e.to}',
+                        style: mono.copyWith(
+                            fontWeight: FontWeight.w700, fontSize: 14.5)),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        if (e.aircraftType.isNotEmpty) e.aircraftType,
+                        if (e.tailNumber.isNotEmpty) e.tailNumber,
+                        e.categoryClass.isEmpty ? 'no class' : e.categoryClass,
+                        if (e.tailwheel) 'TW',
+                      ].join(' · '),
+                      style: TextStyle(
+                          fontSize: 12.5, color: scheme.onSurfaceVariant),
+                    ),
+                    if (flags.isNotEmpty || e.remarks.isNotEmpty)
+                      Text(
+                        [flags.join(' '), e.remarks]
+                            .where((s) => s.isNotEmpty)
+                            .join(' · '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12, color: scheme.onSurfaceVariant),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(e.totalTime.toStringAsFixed(1),
+                      style: TextStyle(
+                          fontFamily: AppFonts.heading,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                          color: scheme.primary)),
+                  Text('${e.totalLandings} ldg',
+                      style: mono.copyWith(
+                          fontSize: 11, color: scheme.onSurfaceVariant)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _totals(BuildContext context, LogbookService svc) {
+    final now = _now();
+    final windows = <(String, int?)>[
+      ('30 days', 30),
+      ('90 days', 90),
+      ('365 days', 365),
+      ('All time', null),
+    ];
+    final cols = [
+      for (final w in windows) totalsWithin(svc.entries, now: now, days: w.$2)
+    ];
+    String h(double v) => v.toStringAsFixed(1);
+    final rows = <(String, String Function(LogbookTotals))>[
+      ('Flights', (t) => '${t.totalFlights}'),
+      ('Total', (t) => h(t.totalTime)),
+      ('PIC', (t) => h(t.picTime)),
+      ('SIC', (t) => h(t.sicTime)),
+      ('Dual rcvd', (t) => h(t.dualReceived)),
+      ('Solo', (t) => h(t.soloTime)),
+      ('XC', (t) => h(t.crossCountry)),
+      ('Night', (t) => h(t.night)),
+      ('Actual inst', (t) => h(t.actualInstrument)),
+      ('Sim inst', (t) => h(t.simulatedInstrument)),
+      ('Approaches', (t) => '${t.approaches}'),
+      ('Day T/O', (t) => '${t.dayTakeoffs}'),
+      ('Day ldg', (t) => '${t.dayLandings}'),
+      ('Night T/O', (t) => '${t.nightTakeoffs}'),
+      ('Night ldg', (t) => '${t.nightLandings}'),
+    ];
+    const mono = TextStyle(fontFamily: AppFonts.mono, fontSize: 13);
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (context.watch<SettingsStore>().profile.studentPilot) ...[
+          PlacardCard(
+            key: const Key('student-progress-card'),
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.school_outlined, color: scheme.primary),
+              title: const Text('Private pilot progress',
+                  style: TextStyle(
+                      fontFamily: AppFonts.heading,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17)),
+              subtitle: const Text('Your hours against 61.109(a)'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => StudentProgressScreen(clock: widget.clock))),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        const SectionHeader('Totals', subtitle: 'Hours and counts by window'),
+        SkyCard(
+          padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+          child: Table(
+          columnWidths: const {0: FlexColumnWidth(1.5)},
+          border: TableBorder(
+              horizontalInside: BorderSide(color: scheme.outlineVariant)),
+          children: [
+            TableRow(children: [
+              const SizedBox(),
+              for (final w in windows)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(w.$1,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                          fontFamily: AppFonts.heading,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: scheme.primary)),
+                ),
+            ]),
+            for (final r in rows)
+              TableRow(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(r.$1),
+                ),
+                for (final t in cols)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Text(r.$2(t), textAlign: TextAlign.right, style: mono),
+                  ),
+              ]),
+          ],
+        ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '"30 days" is today and the 29 days before it.',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterSheet extends StatefulWidget {
+  const _FilterSheet({required this.initial});
+  final LogbookQuery initial;
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  late LogbookQuery q = widget.initial;
+
+  Future<void> _date(bool from) async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: (from ? q.from : q.to) ?? DateTime.now(),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(DateTime.now().year + 1),
+    );
+    if (d == null) return;
+    setState(() => q = from ? q.copyWith(from: d) : q.copyWith(to: d));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SectionHeader('Filters'),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _date(true),
+                  child: Text(q.from == null ? 'From date' : dayMonthYear(q.from!)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _date(false),
+                  child: Text(q.to == null ? 'To date' : dayMonthYear(q.to!)),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              for (final p in ['', ...CategoryClass.presets])
+                ChoiceChip(
+                  label: Text(p.isEmpty ? 'Any class' : p),
+                  selected: q.categoryClass == p,
+                  onSelected: (_) =>
+                      setState(() => q = q.copyWith(categoryClass: p)),
+                ),
+            ]),
+            const SizedBox(height: 6),
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              FilterChip(
+                  label: const Text('Night'),
+                  selected: q.night,
+                  onSelected: (v) => setState(() => q = q.copyWith(night: v))),
+              FilterChip(
+                  label: const Text('IFR'),
+                  selected: q.ifr,
+                  onSelected: (v) => setState(() => q = q.copyWith(ifr: v))),
+              FilterChip(
+                  label: const Text('Flight review'),
+                  selected: q.flightReview,
+                  onSelected: (v) =>
+                      setState(() => q = q.copyWith(flightReview: v))),
+              FilterChip(
+                  label: const Text('IPC'),
+                  selected: q.ipc,
+                  onSelected: (v) => setState(() => q = q.copyWith(ipc: v))),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context).pop(LogbookQuery(text: q.text)),
+                child: const Text('Clear'),
+              ),
+              const Spacer(),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(q),
+                child: const Text('Apply'),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+}

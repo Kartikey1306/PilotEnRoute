@@ -8,8 +8,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/screens/settings_screen.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/features/settings/presentation/settings_screen.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/harness.dart';

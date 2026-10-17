@@ -14,11 +14,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
-import 'package:pilot_enroute/screens/airport_screen.dart';
-import 'package:pilot_enroute/screens/charts_screen.dart';
-import 'package:pilot_enroute/services/chart_service.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
-import 'package:pilot_enroute/services/weather_service.dart';
+import 'package:pilot_enroute/features/plan/presentation/airport_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/charts_screen.dart';
+import 'package:pilot_enroute/features/plan/data/chart_service.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/weather_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<T> withHttp<T>(

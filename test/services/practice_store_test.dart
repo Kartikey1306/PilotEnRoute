@@ -3,7 +3,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/services/practice_store.dart';
+import 'package:pilot_enroute/data/repositories/practice_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 PracticeAnswer a(String q, bool ok, {String t = 'airspace', int min = 0}) =>

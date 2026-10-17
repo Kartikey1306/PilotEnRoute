@@ -7,7 +7,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/screens/fuel_screen.dart';
+import 'package:pilot_enroute/features/plan/presentation/fuel_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> openFuel(WidgetTester tester) async {

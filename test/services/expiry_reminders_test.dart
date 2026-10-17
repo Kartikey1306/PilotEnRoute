@@ -14,11 +14,11 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pilot_enroute/core/legality/pilot_profile.dart';
 import 'package:pilot_enroute/core/reminders/reminder_plan.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
-import 'package:pilot_enroute/services/logbook_service.dart';
-import 'package:pilot_enroute/services/notification_service.dart';
-import 'package:pilot_enroute/services/reminder_service.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_service.dart';
+import 'package:pilot_enroute/core/services/notification_service.dart';
+import 'package:pilot_enroute/features/settings/data/reminder_service.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

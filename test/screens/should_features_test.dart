@@ -11,13 +11,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:pilot_enroute/core/legality/pilot_profile.dart';
 import 'package:pilot_enroute/core/logbook/logbook_csv.dart';
-import 'package:pilot_enroute/data/logbook_store.dart';
-import 'package:pilot_enroute/screens/plan_screen.dart';
-import 'package:pilot_enroute/screens/logbook_screen.dart';
-import 'package:pilot_enroute/screens/student_progress_screen.dart';
-import 'package:pilot_enroute/screens/today_screen.dart';
-import 'package:pilot_enroute/services/logbook_service.dart';
-import 'package:pilot_enroute/services/settings_store.dart';
+import 'package:pilot_enroute/data/repositories/logbook_store.dart';
+import 'package:pilot_enroute/features/plan/presentation/plan_screen.dart';
+import 'package:pilot_enroute/features/logbook/presentation/logbook_screen.dart';
+import 'package:pilot_enroute/features/logbook/presentation/student_progress_screen.dart';
+import 'package:pilot_enroute/features/home/presentation/today_screen.dart';
+import 'package:pilot_enroute/data/repositories/logbook_service.dart';
+import 'package:pilot_enroute/data/repositories/settings_store.dart';
 
 import '../support/awc_fixtures.dart';
 import '../support/harness.dart';

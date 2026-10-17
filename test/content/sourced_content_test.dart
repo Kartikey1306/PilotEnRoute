@@ -7,10 +7,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pilot_enroute/content/faa_library.g.dart';
-import 'package:pilot_enroute/content/faa_questions.g.dart';
-import 'package:pilot_enroute/content/instruments.g.dart';
-import 'package:pilot_enroute/content/sourced.dart';
+import 'package:pilot_enroute/data/content/faa_library.g.dart';
+import 'package:pilot_enroute/data/content/faa_questions.g.dart';
+import 'package:pilot_enroute/data/content/instruments.g.dart';
+import 'package:pilot_enroute/data/content/sourced.dart';
 
 final _cite = RegExp(r'^(PHAK FAA-H-8083-25C, ch\. 8, p\. 8-\d+|AIM \d-\d-\d+)');
 

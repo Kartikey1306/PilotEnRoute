@@ -75,6 +75,12 @@ void main() {
   // FAA-sourced content; test/content/sourced_content_test.dart holds them
   // to that. The rest stay removed.
   test('the removed modules are gone from lib/', () {
+    // By file name anywhere under lib/, so a deleted screen cannot come back
+    // in a feature folder unnoticed.
+    final libFiles = Directory('lib')
+        .listSync(recursive: true)
+        .map((e) => e.path.split('/').last)
+        .toSet();
     for (final name in [
       'simulation', 'emergency', 'drone', 'education', 'exam',
       'flashcard', 'glossary', 'regulations', 'career', 'icara', 'garmin',
@@ -82,11 +88,10 @@ void main() {
       'navdb', 'flight_tracker', 'debrief', 'alerts', 'news',
       'notifications', 'endorsements', 'account', 'login',
     ]) {
-      expect(File('lib/screens/${name}_screen.dart').existsSync(), isFalse,
-          reason: name);
+      expect(libFiles, isNot(contains('${name}_screen.dart')), reason: name);
     }
-    expect(File('lib/widgets/app_drawer.dart').existsSync(), isFalse);
-    expect(File('lib/widgets/daily_quote_card.dart').existsSync(), isFalse);
+    expect(libFiles, isNot(contains('app_drawer.dart')));
+    expect(libFiles, isNot(contains('daily_quote_card.dart')));
   });
 
   test('pubspec bundles no empty data files and fetches no fonts', () {
