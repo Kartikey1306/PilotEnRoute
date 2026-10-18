@@ -9,31 +9,19 @@ dependencies:
   # The portfolio's twelve languages, the locale controller, the picker and
   # the vocabulary every AGL app shares.
   agl_i18n:
-    git:
-      url: https://github.com/AmericanGroupLLC/agl-manifest.git
-      path: packages/agl_i18n
-      ref: master
+    path: ../../manifest/packages/agl_i18n
   flutter_localizations:
     sdk: flutter
   agl_ads:
-    git:
-      url: https://github.com/AmericanGroupLLC/agl-manifest.git
-      path: packages/agl_ads
-      ref: master
+    path: ../../manifest/packages/agl_ads
   # Cancels local notifications without the main-thread wait that freezes
   # apps on the iOS 27 simulator (see packages/agl_notify/README.md).
   agl_notify:
-    git:
-      url: https://github.com/AmericanGroupLLC/agl-manifest.git
-      path: packages/agl_notify
-      ref: master
+    path: ../../manifest/packages/agl_notify
   flutter:
     sdk: flutter
   agl_observability:
-    git:
-      url: https://github.com/AmericanGroupLLC/agl-manifest.git
-      path: packages/agl_observability
-      ref: master
+    path: ../../manifest/packages/agl_observability
 
   # ── Core UI ──────────────────────────────────────────────────────────────────
   cupertino_icons: ^1.0.8

@@ -12,38 +12,30 @@ packages:
   agl_ads:
     dependency: "direct main"
     description:
-      path: "packages/agl_ads"
-      ref: master
-      resolved-ref: f0fc3b237de24a4f0b2a3b9548bf09b4bd9377c6
-      url: "https://github.com/AmericanGroupLLC/agl-manifest.git"
-    source: git
+      path: "../../manifest/packages/agl_ads"
+      relative: true
+    source: path
     version: "1.0.0"
   agl_i18n:
     dependency: "direct main"
     description:
-      path: "packages/agl_i18n"
-      ref: master
-      resolved-ref: f0fc3b237de24a4f0b2a3b9548bf09b4bd9377c6
-      url: "https://github.com/AmericanGroupLLC/agl-manifest.git"
-    source: git
+      path: "../../manifest/packages/agl_i18n"
+      relative: true
+    source: path
     version: "1.0.0"
   agl_notify:
     dependency: "direct main"
     description:
-      path: "packages/agl_notify"
-      ref: master
-      resolved-ref: "3ded3bea5b1ec74728feab6b99261f59f399928d"
-      url: "https://github.com/AmericanGroupLLC/agl-manifest.git"
-    source: git
+      path: "../../manifest/packages/agl_notify"
+      relative: true
+    source: path
     version: "1.0.0"
   agl_observability:
     dependency: "direct main"
     description:
-      path: "packages/agl_observability"
-      ref: master
-      resolved-ref: "563fd50ce6198212826f33c026ccb7b27c404e10"
-      url: "https://github.com/AmericanGroupLLC/agl-manifest.git"
-    source: git
+      path: "../../manifest/packages/agl_observability"
+      relative: true
+    source: path
     version: "1.1.0"
   archive:
     dependency: transitive
