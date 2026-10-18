@@ -290,8 +290,8 @@ void main() {
       });
     }
 
-    test('every route literal used in the UI is registered in main.dart', () {
-      final mainSrc = File('lib/main.dart').readAsStringSync();
+    test('every route literal used in the UI is registered in app.dart', () {
+      final mainSrc = File('lib/app.dart').readAsStringSync();
       final registered = RegExp(r"case '(/[a-z0-9-]*)':")
           .allMatches(mainSrc)
           .map((m) => m.group(1)!)
@@ -302,7 +302,7 @@ void main() {
           .listSync(recursive: true)
           .whereType<File>()
           .where((f) => f.path.endsWith('.dart'))) {
-        if (file.path.endsWith('main.dart')) continue;
+        if (file.path.endsWith('lib/app.dart')) continue; // the registry itself
         final src = file.readAsStringSync();
         referenced.addAll(RegExp(r"pushNamed\(\s*'(/[a-z0-9-]+)'")
             .allMatches(src)
