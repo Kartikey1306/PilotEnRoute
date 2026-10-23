@@ -78,6 +78,7 @@ Committed 2026-10-16. They can predate the current build: re-capture with `integ
 ## Design tokens
 
 [`tokens.json`](tokens.json): colours and fonts from `lib/core/theme/`.
+What to improve next, measured: [`IMPROVEMENTS.md`](IMPROVEMENTS.md).
 Next-release mockups go in [`screens/`](screens/), intended flows in [`flows/`](flows/).
 
 <!-- design:end -->

@@ -35,7 +35,9 @@ commands; the spec has the product rules.
 
 - Theme and fonts: see the app README's "Design system" section; change colours
   and type in `lib/core/theme/` only.
-- Next design work: 
+- Next design work (from design/IMPROVEMENTS.md, 2026-10-22):
+  - [ ] Apple held this app under 4.2.6 (looks generated from a template): the distinctness items come first, and the next submission needs a visibly different app
+  - [ ] Replace or restyle the shared language screen (agl_i18n `AglLanguageScreen`/`AglLanguageList`): it looks the same in 13 apps
 
 ## Ads
 
