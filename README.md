@@ -70,7 +70,9 @@ Fonts: Sofia Sans, Sofia Sans Condensed, Fira Mono — SIL Open Font License
 
 ## Structure and UI guide
 
-Spec: none in `manifest/ai-office/projects/real-apps/specs/` · last QA verdict: **none** (`manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json`)
+Spec: [`docs/DESIGN.md`](docs/DESIGN.md) · last QA verdict: **none** (`manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json`)
+  
+Next releases (changes, designs, open questions): [`ROADMAP.md`](ROADMAP.md)
 
 Flutter project: `apps/PilotEnRoute/` (run every command below from there).
 
