@@ -7,7 +7,7 @@ commands; the spec has the product rules.
 ## Where things stand
 
 - Store subtitle: "Logbook, currency & go/no-go"
-- Spec: [docs/DESIGN.md](docs/DESIGN.md) (no spec in real-apps/specs)
+- Spec: [SPEC.md](SPEC.md) (in this folder)
 - Last QA verdict: **none** ([record](../../manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json), last changed 2026-10-13)
 - Decisions already taken: [decision log](../../manifest/ai-office/company/decision-log.md)
 

@@ -70,7 +70,7 @@ Fonts: Sofia Sans, Sofia Sans Condensed, Fira Mono — SIL Open Font License
 
 ## Structure and UI guide
 
-Spec: [`docs/DESIGN.md`](docs/DESIGN.md) · last QA verdict: **none** (`manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json`)
+Spec: [`SPEC.md`](SPEC.md) · last QA verdict: **none** (`manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json`)
   
 Next releases (changes, designs, open questions): [`ROADMAP.md`](ROADMAP.md)
 
