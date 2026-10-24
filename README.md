@@ -76,6 +76,8 @@ Next releases (changes, designs, open questions): [`ROADMAP.md`](ROADMAP.md)
   
 Design (screen map, screens, screenshots, tokens, flows, mockups): [`design/`](design/README.md)
   
+Code map (modules, every file and what it declares, hotspots): [`ARCHITECTURE.md`](ARCHITECTURE.md)
+  
 AdMob ids, vendor keys, APIs, affiliate links, where secrets live: [`INTEGRATIONS.md`](INTEGRATIONS.md)
 
 Flutter project: `apps/PilotEnRoute/` (run every command below from there).
