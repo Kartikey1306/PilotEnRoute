@@ -289,8 +289,11 @@ class FlightPlanService extends ChangeNotifier {
     final etdStr = etdUtc != null
         ? '${etdUtc.hour.toString().padLeft(2, '0')}${etdUtc.minute.toString().padLeft(2, '0')}'
         : '0000';
-    final eteStr = plan.estimatedTime != null
-        ? '${plan.estimatedTime!.floor().toString().padLeft(2, '0')}${((plan.estimatedTime! % 1) * 60).round().toString().padLeft(2, '0')}'
+    // Round the whole time to minutes first, so 1.995 h is "0200", not "0160".
+    final eteMinutes =
+        plan.estimatedTime == null ? null : (plan.estimatedTime! * 60).round();
+    final eteStr = eteMinutes != null
+        ? '${(eteMinutes ~/ 60).toString().padLeft(2, '0')}${(eteMinutes % 60).toString().padLeft(2, '0')}'
         : '0000';
 
     return '''

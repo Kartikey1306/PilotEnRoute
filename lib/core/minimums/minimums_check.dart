@@ -133,7 +133,15 @@ MinimumsResult checkAgainst({
     } else if (visibility == null) {
       state = CheckState.unknown;
     } else if (visibility.orLess) {
-      state = visibility.miles <= lim ? CheckState.outside : _min(visibility.miles, lim);
+      // "M1/4SM" is less than 1/4 sm: outside any limit at or above that,
+      // but against a smaller limit the real value could be either side.
+      if (visibility.miles <= lim) {
+        state = CheckState.outside;
+      } else {
+        state = CheckState.unknown;
+        detail = 'Reported as ${visibility.text}; cannot confirm your '
+            '${_num(lim)} sm.';
+      }
     } else if (visibility.orMore && visibility.miles < lim) {
       state = CheckState.unknown;
       detail = 'Reported as ${visibility.text}; cannot confirm your '

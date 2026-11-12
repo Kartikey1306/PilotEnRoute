@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pilot_enroute/screens/fuel_screen.dart';
+import 'package:pilot_enroute/services/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> openFuel(WidgetTester tester) async {
@@ -162,6 +163,53 @@ void main() {
         find.text('Enter ground speed to compute distance-based fuel.'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('tank switch alert', () {
+    late List<(DateTime, String)> scheduled;
+    late int cancels;
+
+    setUp(() {
+      scheduled = [];
+      cancels = 0;
+      NotificationService.permissionRequester = () async => true;
+      NotificationService.fuelScheduler =
+          (at, tank) async => scheduled.add((at, tank));
+      NotificationService.fuelCanceller = () async => cancels++;
+    });
+
+    testWidgets('START schedules the OS alert for the switch time, so it '
+        'sounds with the phone locked; PAUSE cancels it', (tester) async {
+      await openFuel(tester);
+      final before = DateTime.now();
+      await tester.tap(find.text('START'));
+      await tester.pump();
+      await tester.pump();
+
+      expect(scheduled, hasLength(1));
+      final (at, tank) = scheduled.single;
+      expect(tank, 'left');
+      // Default interval: 30 minutes from now.
+      expect(at.difference(before).inMinutes, inInclusiveRange(29, 30));
+
+      final cancelsBefore = cancels;
+      await tester.tap(find.text('PAUSE'));
+      await tester.pump();
+      expect(cancels, greaterThan(cancelsBefore));
+    });
+
+    testWidgets('switching tanks moves the alert to the other tank',
+        (tester) async {
+      await openFuel(tester);
+      await tester.tap(find.text('START'));
+      await tester.pump();
+      await tester.tap(find.text('SWITCH TANK'));
+      await tester.pump();
+      await tester.pump();
+      expect(scheduled.last.$2, 'right');
+      await tester.tap(find.text('PAUSE'));
+      await tester.pump();
     });
   });
 }

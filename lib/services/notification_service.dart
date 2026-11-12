@@ -59,6 +59,12 @@ class NotificationService {
       description: channelDescription,
       importance: Importance.high,
     ));
+    await android?.createNotificationChannel(const AndroidNotificationChannel(
+      fuelChannelId,
+      'Fuel tank switch',
+      description: 'The tank timer telling you to switch tanks',
+      importance: Importance.max,
+    ));
   }
 
   /// Asks for notification permission. iOS shows the system alert only for
@@ -92,6 +98,72 @@ class NotificationService {
       return false;
     }
   }
+
+  // ── Fuel tank switch alert ────────────────────────────────────────────────
+  // The tank timer's on-screen alert can't sound with the phone locked or the
+  // app in the background, so the switch time is also scheduled with the OS.
+
+  /// Below every lapse-reminder id (those start at 2000).
+  static const int fuelSwitchId = 1001;
+  static const String fuelChannelId = 'fuel_switch';
+
+  /// Schedules the "switch tanks" alert for [at], replacing any earlier one.
+  /// Asks for notification permission the first time (the pilot has just
+  /// started the timer). Returns false when it could not be scheduled.
+  static Future<bool> scheduleFuelSwitch(DateTime at, {required String tank}) async {
+    try {
+      await fuelCanceller();
+      if (!await permissionRequester()) return false;
+      await fuelScheduler(at, tank);
+      return true;
+    } catch (e) {
+      debugPrint('Scheduling the fuel switch alert failed: $e');
+      return false;
+    }
+  }
+
+  /// Cancels the pending "switch tanks" alert, if any. Never throws.
+  static Future<void> cancelFuelSwitch() async {
+    try {
+      await fuelCanceller();
+    } catch (e) {
+      debugPrint('Cancelling the fuel switch alert failed: $e');
+    }
+  }
+
+  static Future<void> _scheduleFuel(DateTime at, String tank) async {
+    _notify.noteScheduled(fuelSwitchId);
+    await _plugin.zonedSchedule(
+      fuelSwitchId,
+      'Switch fuel tanks',
+      'Time to switch from the $tank tank.',
+      tz.TZDateTime.from(at, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          fuelChannelId,
+          'Fuel tank switch',
+          channelDescription: 'The tank timer telling you to switch tanks',
+          importance: Importance.max,
+          priority: Priority.max,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  @visibleForTesting
+  static Future<void> Function(DateTime at, String tank) fuelScheduler =
+      _scheduleFuel;
+  @visibleForTesting
+  static Future<void> Function() fuelCanceller =
+      () => _notify.cancel(const [fuelSwitchId]);
 
   /// Seams so tests can observe scheduling without the platform plugin.
   @visibleForTesting

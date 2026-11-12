@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/notification_service.dart';
 import '../ui/theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -65,6 +66,8 @@ class _FuelScreenState extends State<FuelScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    // Leaving the screen stops the timer, so its alert must not fire later.
+    if (_running) NotificationService.cancelFuelSwitch();
     _totalFuelCtrl.dispose();
     _burnRateCtrl.dispose();
     _reserveCtrl.dispose();
@@ -96,6 +99,8 @@ class _FuelScreenState extends State<FuelScreen> {
     } catch (_) {
       // Non-fatal.
     }
+    // A new interval moves the pending switch alert.
+    _syncSwitchAlert();
   }
 
   // ── Tank timer control ─────────────────────────────────────────────────────
@@ -120,21 +125,39 @@ class _FuelScreenState extends State<FuelScreen> {
         }
       });
     });
+    _syncSwitchAlert();
+  }
+
+  /// Hands the switch time to the OS, so the alert sounds even with the phone
+  /// locked; cancels it when the timer is not running or already past due.
+  void _syncSwitchAlert() {
+    final intervalSeconds = _switchIntervalMinutes * 60;
+    final remaining = intervalSeconds - _currentTankSeconds;
+    if (!_running || intervalSeconds <= 0 || remaining <= 0) {
+      NotificationService.cancelFuelSwitch();
+      return;
+    }
+    NotificationService.scheduleFuelSwitch(
+      DateTime.now().add(Duration(seconds: remaining)),
+      tank: _leftActive ? 'left' : 'right',
+    );
   }
 
   void _pauseTimer() {
     _timer?.cancel();
     if (mounted) setState(() => _running = false);
+    NotificationService.cancelFuelSwitch();
   }
 
   void _resetTimer() {
     _timer?.cancel();
+    NotificationService.cancelFuelSwitch();
     if (mounted) {
       setState(() {
         _running = false;
         _currentTankSeconds = 0;
-      _runBaseSeconds = 0;
-      _runStartedAt = DateTime.now();
+        _runBaseSeconds = 0;
+        _runStartedAt = DateTime.now();
         _alertActive = false;
         _hapticFired = false;
       });
@@ -157,6 +180,7 @@ class _FuelScreenState extends State<FuelScreen> {
       _alertActive = false;
       _hapticFired = false;
     });
+    _syncSwitchAlert();
   }
 
   // ── Formatting helpers ─────────────────────────────────────────────────────

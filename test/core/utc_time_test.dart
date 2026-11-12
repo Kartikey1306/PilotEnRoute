@@ -238,6 +238,20 @@ void main() {
           contains('ETD: 0015Z'));
     });
 
+    test('ETE rounds the whole time, never printing 60 minutes', () {
+      FlightPlan withEte(double h) => FlightPlan(
+            id: 'p',
+            name: 'T',
+            departure: 'KPAO',
+            destination: 'KMRY',
+            estimatedTime: h,
+            createdAt: DateTime.utc(2026, 10, 14),
+          );
+      final s = FlightPlanService();
+      expect(s.generateFaaFlightPlanString(withEte(1.995)), contains('ETE: 0200'));
+      expect(s.generateFaaFlightPlanString(withEte(1.5)), contains('ETE: 0130'));
+    });
+
     test('an ETD saved locally and read back still reads in Zulu', () {
       final etd = DateTime.utc(2026, 10, 15, 0, 15).toLocal();
       final back = FlightPlan.fromJson(plan(etd).toJson());

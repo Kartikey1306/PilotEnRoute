@@ -215,6 +215,21 @@ void main() {
       expect(x.detail, contains('treated as full crosswind'));
     });
 
+    test('"M1/4SM" is outside 1/4 sm and unknown against a smaller limit', () {
+      MinimumsResult vis(double lim) => checkAgainst(
+            source: 'METAR',
+            set: MinimumsSet(visibilitySm: lim),
+            ceilingFt: null,
+            clouds: const [],
+            visibility: Visibility.parse('M1/4SM'),
+            wind: null,
+            runways: const [],
+          );
+      expect(line(vis(3), 'visibility').state, CheckState.outside);
+      expect(line(vis(0.25), 'visibility').state, CheckState.outside);
+      expect(line(vis(0.2), 'visibility').state, CheckState.unknown);
+    });
+
     test('a limit left blank is "not set", never a default', () {
       final r = check('KDLH', MinimumsSet.blank);
       for (final l in r.lines) {

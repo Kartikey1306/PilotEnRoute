@@ -54,6 +54,7 @@ Future<Harness> openToday(
   http.Client Function()? client,
   LogbookStore? store,
   WeatherService? weather,
+  DateTime Function() now = clock,
 }) async {
   tester.view.physicalSize = const Size(1200, 3600);
   tester.view.devicePixelRatio = 1.0;
@@ -69,7 +70,7 @@ Future<Harness> openToday(
     weather: weather,
   );
   await http.runWithClient(() async {
-    await tester.pumpWidget(h.wrap(const TodayScreen(clock: clock)));
+    await tester.pumpWidget(h.wrap(TodayScreen(clock: now)));
     for (var i = 0; i < 12; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -164,6 +165,23 @@ void main() {
     expect(find.text('STALE'), findsOneWidget);
     expect(find.textContaining('9 h 23 min old'), findsOneWidget);
     expect(find.text('No TAF is issued for KPAO.'), findsOneWidget);
+  });
+
+  testWidgets('a departure after dark with Night off warns; Night on clears it',
+      (tester) async {
+    // 01:30Z on 15 Oct is 21:30 at KACK, well over an hour after sunset.
+    await openToday(tester,
+        entries: [flight(DateTime(2026, 10, 1))],
+        now: () => DateTime.utc(2026, 10, 15, 1, 30));
+    expect(find.byKey(const Key('go-night-warning')), findsOneWidget);
+    await tester.tap(find.text('Night'));
+    await tester.pump();
+    expect(find.byKey(const Key('go-night-warning')), findsNothing);
+  });
+
+  testWidgets('a daytime departure has no night warning', (tester) async {
+    await openToday(tester, entries: [flight(DateTime(2026, 10, 1))]);
+    expect(find.byKey(const Key('go-night-warning')), findsNothing);
   });
 
   testWidgets('"Log this flight" opens the entry form pre-filled',
