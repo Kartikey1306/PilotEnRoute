@@ -150,7 +150,18 @@ class WBResult {
   final double fwdLimit; // interpolated fwd CG limit at totalWeight
   final double aftLimit; // interpolated aft CG limit at totalWeight
 
+  /// Stations loaded past their own limit (a baggage area's structural
+  /// maximum, a tank's capacity), whatever the gross weight and CG say.
+  final List<String> overLimitStations;
+
+  /// Under max gross but below the envelope's lowest weight.
+  final bool belowEnvelope;
+
+  bool get stationsOk => overLimitStations.isEmpty;
+
   const WBResult({
+    this.overLimitStations = const [],
+    this.belowEnvelope = false,
     required this.totalWeight,
     required this.totalMoment,
     required this.cg,
@@ -283,10 +294,15 @@ class WeightBalanceService extends ChangeNotifier {
   WBResult compute(AircraftProfile p, Map<String, double> loading) {
     double weight = p.emptyWeight;
     double moment = p.emptyMoment;
+    final overLimit = <String>[];
 
     for (final s in p.stations) {
       final input = loading[s.name] ?? 0;
       final w = s.isFuel ? input * kFuelWeightPerGallon : input;
+      if ((s.maxWeight != null && w > s.maxWeight! + 1e-9) ||
+          (s.isFuel && s.maxGallons != null && input > s.maxGallons! + 1e-9)) {
+        overLimit.add(s.name);
+      }
       weight += w;
       moment += w * s.arm;
     }
@@ -302,6 +318,8 @@ class WeightBalanceService extends ChangeNotifier {
     final cgOk = hasCg && cg >= fwd - 1e-9 && cg <= aft + 1e-9 && weightOk;
 
     return WBResult(
+      overLimitStations: overLimit,
+      belowEnvelope: weight <= p.maxGross && weight < _minEnvelopeWeight(p),
       totalWeight: weight,
       totalMoment: moment,
       cg: cg,

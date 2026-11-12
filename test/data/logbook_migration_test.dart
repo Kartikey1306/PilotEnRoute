@@ -184,4 +184,18 @@ void main() {
     expect(await SqfliteLogbookStore(db).allEntries(), hasLength(3));
     await db.close();
   });
+
+  test('one unreadable row is skipped, not fatal, and is kept', () async {
+    await seedV1(v1Rows);
+    final db = await openLogbookDatabase(factory, path);
+    await db.rawUpdate(
+        "UPDATE logbook_entries SET date = 'not a date' WHERE id = 1");
+    final store = SqfliteLogbookStore(db);
+    expect(await store.allEntries(), hasLength(v1Rows.length - 1));
+    expect(store.unreadableRows, 1);
+    // Left in the database for a later fix, never deleted.
+    final count = await db.rawQuery('SELECT COUNT(*) AS n FROM logbook_entries');
+    expect(count.single['n'], v1Rows.length);
+    await db.close();
+  });
 }

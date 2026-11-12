@@ -30,6 +30,7 @@ class _WeatherScreenState extends State<WeatherScreen>
   List<Map<String, dynamic>> _airmets = [];
   List<Map<String, dynamic>> _winds = [];
   bool _advisoriesLoaded = false;
+  String? _advisoriesFor;
 
   @override
   void initState() {
@@ -52,16 +53,20 @@ class _WeatherScreenState extends State<WeatherScreen>
     if (id.length < 3) return;
     final svc = context.read<WeatherService>();
     setState(() => _loading = true);
-    final snap = await svc.fetchSnapshot(id);
-    if (!mounted) return;
-    setState(() {
-      _snap = snap;
-      _loading = false;
-    });
-    if (!_advisoriesLoaded) _loadAdvisories(id);
+    try {
+      final snap = await svc.fetchSnapshot(id);
+      if (!mounted) return;
+      setState(() => _snap = snap);
+    } finally {
+      // An unexpected answer must not leave the spinner up and Get disabled.
+      if (mounted) setState(() => _loading = false);
+    }
+    // PIREPs are "near this station": reload them when the station changes.
+    if (_advisoriesFor != id) _loadAdvisories(id);
   }
 
   Future<void> _loadAdvisories(String id) async {
+    _advisoriesFor = id;
     final svc = context.read<WeatherService>();
     final results = await Future.wait([
       svc.fetchPireps(icao: id),
@@ -69,7 +74,8 @@ class _WeatherScreenState extends State<WeatherScreen>
       svc.fetchAirmets(),
       svc.fetchWindsAloft(),
     ]);
-    if (!mounted) return;
+    // A newer search started while this one was loading: keep its answer.
+    if (!mounted || _advisoriesFor != id) return;
     setState(() {
       _pireps = results[0];
       _sigmets = results[1];

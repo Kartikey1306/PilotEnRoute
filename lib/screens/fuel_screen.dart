@@ -45,6 +45,10 @@ class _FuelScreenState extends State<FuelScreen> {
   Timer? _timer;
   bool _running = false;
   int _currentTankSeconds = 0; // elapsed on the active tank this leg
+  // Elapsed time comes from the wall clock, not from counting ticks: Dart
+  // timers stop while the app is in the background or the phone is locked.
+  DateTime? _runStartedAt;
+  int _runBaseSeconds = 0;
   int _leftTotalSeconds = 0; // running total on LEFT
   int _rightTotalSeconds = 0; // running total on RIGHT
   bool _leftActive = true; // true = LEFT, false = RIGHT
@@ -98,11 +102,14 @@ class _FuelScreenState extends State<FuelScreen> {
   void _startTimer() {
     if (_running) return;
     setState(() => _running = true);
+    _runStartedAt = DateTime.now();
+    _runBaseSeconds = _currentTankSeconds;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
-        _currentTankSeconds++;
+        _currentTankSeconds = _runBaseSeconds +
+            DateTime.now().difference(_runStartedAt!).inSeconds;
         final intervalSeconds = _switchIntervalMinutes * 60;
         if (intervalSeconds > 0 && _currentTankSeconds >= intervalSeconds) {
           if (!_alertActive) _alertActive = true;
@@ -126,6 +133,8 @@ class _FuelScreenState extends State<FuelScreen> {
       setState(() {
         _running = false;
         _currentTankSeconds = 0;
+      _runBaseSeconds = 0;
+      _runStartedAt = DateTime.now();
         _alertActive = false;
         _hapticFired = false;
       });
@@ -143,6 +152,8 @@ class _FuelScreenState extends State<FuelScreen> {
       }
       _leftActive = !_leftActive;
       _currentTankSeconds = 0;
+      _runBaseSeconds = 0;
+      _runStartedAt = DateTime.now();
       _alertActive = false;
       _hapticFired = false;
     });

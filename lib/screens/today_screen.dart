@@ -62,7 +62,11 @@ class _TodayScreenState extends State<TodayScreen> {
     final n = _now();
     // Default: the next quarter hour, local time.
     final q = (n.minute ~/ 15 + 1) * 15;
-    _departure = DateTime(n.year, n.month, n.day, n.hour).add(Duration(minutes: q));
+    // Same time zone as the clock, so the default is always minutes ahead.
+    _departure = (n.isUtc
+            ? DateTime.utc(n.year, n.month, n.day, n.hour)
+            : DateTime(n.year, n.month, n.day, n.hour))
+        .add(Duration(minutes: q));
     final s = context.read<SettingsStore>();
     _dep.text = s.homeAirport;
     _categoryClass = s.profile.homeCategoryClass;
@@ -639,6 +643,20 @@ class _TodayScreenState extends State<TodayScreen> {
     );
   }
 
+  /// Whether departure falls in the 61.57(b) night window at the departure
+  /// airport. Null when that can't be worked out yet.
+  bool? _departsInNightWindow() {
+    final w = _weather;
+    final lat = w?.airport?.lat ?? w?.metar?.lat;
+    final lon = w?.airport?.lon ?? w?.metar?.lon;
+    if (lat == null || lon == null) return null;
+    final win =
+        nightWindowForDeparture(departure: _departure, lat: lat, lon: lon);
+    if (win.startUtc == null || win.endUtc == null) return null;
+    final at = _departure.toUtc();
+    return !at.isBefore(win.startUtc!) && at.isBefore(win.endUtc!);
+  }
+
   Widget _legal(BuildContext context, LegalityReport report, SettingsStore s) {
     final scheme = Theme.of(context).colorScheme;
     final needed = report.rules.where((r) => r.required).toList();
@@ -678,6 +696,19 @@ class _TodayScreenState extends State<TodayScreen> {
             ],
           ),
         ),
+        // Night is the pilot's call, but a departure after dark with Night
+        // off would be judged on day currency and day minimums: say so.
+        if (!_night && _departsInNightWindow() == true)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: NoticeLine(
+              key: Key('go-night-warning'),
+              icon: Icons.nightlight_outlined,
+              text: 'Departure is in the 61.57(b) night window (1 h after '
+                  'sunset to 1 h before sunrise). Turn on Night to check '
+                  'night currency and use your night minimums.',
+            ),
+          ),
         if (_night && _nightLine() != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),

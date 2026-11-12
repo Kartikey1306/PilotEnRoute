@@ -88,7 +88,12 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
     final prefs = await _prefs;
     await prefs.setString(kProfile, jsonEncode(p.toJson()));
-    if (p.name.isNotEmpty) await prefs.setString('profile_name', p.name);
+    // The logbook PDF reads this: a cleared name must not linger there.
+    if (p.name.isNotEmpty) {
+      await prefs.setString('profile_name', p.name);
+    } else {
+      await prefs.remove('profile_name');
+    }
   }
 
   Future<void> setMinimums(PersonalMinimums m) async {

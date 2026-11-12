@@ -15,6 +15,46 @@ class FlightPlanScreen extends StatefulWidget {
 class _FlightPlanScreenState extends State<FlightPlanScreen> {
   bool _creating = false;
 
+  // The form lives in the State, not in build(): a rebuild (loadPlans
+  // finishing, a save) must not wipe what the pilot has typed.
+  final formKey = GlobalKey<FormState>();
+  final nameCtrl = TextEditingController();
+  final depCtrl = TextEditingController();
+  final destCtrl = TextEditingController();
+  final altCtrl = TextEditingController();
+  final typeCtrl = TextEditingController();
+  final tailCtrl = TextEditingController();
+  final altitudeCtrl = TextEditingController();
+  final speedCtrl = TextEditingController();
+  final routeCtrl = TextEditingController();
+  final remarksCtrl = TextEditingController();
+  String flightRules = 'VFR';
+
+  List<TextEditingController> get _controllers => [
+        nameCtrl, depCtrl, destCtrl, altCtrl, typeCtrl,
+        tailCtrl, altitudeCtrl, speedCtrl, routeCtrl, remarksCtrl,
+      ];
+
+  /// A blank plan with the usual trainer defaults.
+  void _startNewPlan() {
+    for (final c in _controllers) {
+      c.clear();
+    }
+    typeCtrl.text = 'C172';
+    altitudeCtrl.text = '3500';
+    speedCtrl.text = '110';
+    flightRules = 'VFR';
+    _creating = true;
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +75,7 @@ class _FlightPlanScreenState extends State<FlightPlanScreen> {
               IconButton(
                 tooltip: (AglL10n.of(context)?.actionAdd ?? 'Add'),
                 icon: const Icon(Icons.add),
-                onPressed: () => setState(() => _creating = true),
+                onPressed: () => setState(_startNewPlan),
               ),
             ],
           ),
@@ -44,7 +84,7 @@ class _FlightPlanScreenState extends State<FlightPlanScreen> {
               : _buildPlansList(service),
           floatingActionButton: !_creating
               ? FloatingActionButton.extended(
-                  onPressed: () => setState(() => _creating = true),
+                  onPressed: () => setState(_startNewPlan),
                   backgroundColor: Sky.teal,
                   foregroundColor: Colors.white,
                   icon: const Icon(Icons.add),
@@ -344,19 +384,6 @@ class _FlightPlanScreenState extends State<FlightPlanScreen> {
   }
 
   Widget _buildCreator(FlightPlanService service) {
-    final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController();
-    final depCtrl = TextEditingController();
-    final destCtrl = TextEditingController();
-    final altCtrl = TextEditingController();
-    final typeCtrl = TextEditingController(text: 'C172');
-    final tailCtrl = TextEditingController();
-    final altitudeCtrl = TextEditingController(text: '3500');
-    final speedCtrl = TextEditingController(text: '110');
-    final routeCtrl = TextEditingController();
-    final remarksCtrl = TextEditingController();
-    String flightRules = 'VFR';
-
     return StatefulBuilder(
       builder: (context, setModalState) => SingleChildScrollView(
         padding: const EdgeInsets.all(20),

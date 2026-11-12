@@ -405,8 +405,18 @@ class _WeightBalanceScreenState extends State<WeightBalanceScreen> {
             r.weightOk,
             r.weightOk
                 ? '${_num0.format(profile.maxGross - r.totalWeight)} lb under max gross'
-                : 'Exceeds max gross (${_num0.format(profile.maxGross)} lb)',
+                : r.belowEnvelope
+                    ? 'Below the lightest weight in the CG envelope'
+                    : 'Exceeds max gross (${_num0.format(profile.maxGross)} lb)',
           ),
+          if (!r.stationsOk) ...[
+            const SizedBox(height: 8),
+            _passFail(
+              'STATION LIMITS',
+              false,
+              'Over its limit: ${r.overLimitStations.join(', ')}',
+            ),
+          ],
           const SizedBox(height: 8),
           _passFail(
             'CENTER OF GRAVITY',

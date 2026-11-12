@@ -185,6 +185,21 @@ void main() {
       expect(r.fwdLimit, closeTo(38.3, 1e-9));
       expect(r.aftLimit, closeTo(47.3, 1e-9));
       expect(r.cgOk, isTrue);
+      expect(r.stationsOk, isTrue);
+    });
+
+    test('a baggage area or tank over its own limit is flagged', () {
+      // Gross and CG both pass, but baggage area 1 is rated for 120 lb.
+      final r = service.compute(c172(), {
+        'Front seats (pilot + pax)': 340,
+        'Baggage area 1': 250,
+        'Fuel': 40,
+      });
+      expect(r.weightOk, isTrue);
+      expect(r.cgOk, isTrue);
+      expect(r.overLimitStations, ['Baggage area 1']);
+      final fuel = service.compute(c172(), {'Fuel': 60});
+      expect(fuel.overLimitStations, ['Fuel']);
     });
 
     test('two heavy adults up front with full fuel is forward of the limit',

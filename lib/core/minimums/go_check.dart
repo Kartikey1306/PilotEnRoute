@@ -173,6 +173,10 @@ GoResult evaluateGo({
   }
 
   final minimumsSet = !set.isEmpty;
+  // A METAR stands for the next hour at most.
+  final departureBeyondMetar =
+      departureLocal.toUtc().difference(now.toUtc()).abs() >
+          const Duration(hours: 1);
   String? outsidePhrase;
   if (metarCheck?.firstOutside != null) {
     outsidePhrase = metarCheck!.firstOutside!.outsidePhrase;
@@ -199,13 +203,21 @@ GoResult evaluateGo({
     headline = 'Legal for this flight. Your '
         '${legal.flight.night ? 'night' : 'day'} minimums are not set, so the '
         'weather was not checked against them.';
+  } else if (outsidePhrase != null) {
+    // Checked before a missing METAR: a TAF that is outside the pilot's
+    // minimums must never be hidden behind "weather not checked".
+    verdict = GoVerdict.outside;
+    headline = 'Outside your minimums: $outsidePhrase';
   } else if (metar == null) {
     verdict = GoVerdict.incomplete;
     headline = 'Legal for this flight. Weather not checked: '
         '${weather?.metarProblem ?? 'no weather requested.'}';
-  } else if (outsidePhrase != null) {
-    verdict = GoVerdict.outside;
-    headline = 'Outside your minimums: $outsidePhrase';
+  } else if (departureBeyondMetar && tafChecks.isEmpty) {
+    // The METAR describes now, not a departure hours or days away; with no
+    // TAF group covering departure there is nothing to judge it by.
+    verdict = GoVerdict.incomplete;
+    headline = 'Legal for this flight. Weather not checked for departure: '
+        'the METAR is for now, and no TAF covers departure ±1 h.';
   } else if (stale) {
     verdict = GoVerdict.incomplete;
     final age = metar.ageMinutes(now);

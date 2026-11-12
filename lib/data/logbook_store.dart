@@ -9,6 +9,10 @@ import '../core/minimums/go_record.dart';
 
 abstract class LogbookStore {
   Future<List<LogbookEntry>> allEntries();
+
+  /// Rows the last [allEntries]/[allChecks] could not read. They stay in the
+  /// database untouched; they are only left out of the lists.
+  int get unreadableRows => 0;
   Future<int> insertEntry(LogbookEntry e);
   Future<void> updateEntry(LogbookEntry e);
   Future<void> deleteEntry(int id);
@@ -18,6 +22,9 @@ abstract class LogbookStore {
 }
 
 class MemoryLogbookStore implements LogbookStore {
+  @override
+  int get unreadableRows => 0;
+
   MemoryLogbookStore([List<LogbookEntry> seed = const []]) {
     for (final e in seed) {
       _entries.add(e.copyWith(id: _nextEntry++));
@@ -166,10 +173,31 @@ class SqfliteLogbookStore implements LogbookStore {
   SqfliteLogbookStore(this.db);
   final Database db;
 
+  int _unreadableEntries = 0;
+  int _unreadableChecks = 0;
+
+  @override
+  int get unreadableRows => _unreadableEntries + _unreadableChecks;
+
+  /// One damaged row must not take the whole logbook down with it.
+  static List<T> _readable<T>(List<Map<String, Object?>> rows,
+      T Function(Map<String, Object?>) read, void Function() onBad) {
+    final out = <T>[];
+    for (final r in rows) {
+      try {
+        out.add(read(r));
+      } catch (_) {
+        onBad();
+      }
+    }
+    return out;
+  }
+
   @override
   Future<List<LogbookEntry>> allEntries() async {
     final rows = await db.query('logbook_entries', orderBy: 'date DESC');
-    return rows.map(LogbookEntry.fromMap).toList();
+    _unreadableEntries = 0;
+    return _readable(rows, LogbookEntry.fromMap, () => _unreadableEntries++);
   }
 
   @override
@@ -192,7 +220,8 @@ class SqfliteLogbookStore implements LogbookStore {
   @override
   Future<List<GoCheckRecord>> allChecks() async {
     final rows = await db.query('go_checks', orderBy: 'created_at DESC');
-    return rows.map(GoCheckRecord.fromMap).toList();
+    _unreadableChecks = 0;
+    return _readable(rows, GoCheckRecord.fromMap, () => _unreadableChecks++);
   }
 
   @override

@@ -67,14 +67,26 @@ class LogbookService extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     final store = _store;
-    if (store != null) {
-      _entries = await store.allEntries();
-      _checks = await store.allChecks();
+    try {
+      if (store != null) {
+        _entries = await store.allEntries();
+        _checks = await store.allChecks();
+        final bad = store.unreadableRows;
+        if (bad > 0) {
+          _error = '$bad saved ${bad == 1 ? 'record' : 'records'} could not '
+              'be read and ${bad == 1 ? 'is' : 'are'} not shown. '
+              'Nothing was deleted.';
+        }
+      }
+    } catch (e) {
+      // Keep whatever loaded before; never leave the logbook stuck loading.
+      _error = 'The logbook could not be read: $e';
+    } finally {
+      _totals = LogbookTotals.of(_entries);
+      _isLoading = false;
+      _ready = true;
+      notifyListeners();
     }
-    _totals = LogbookTotals.of(_entries);
-    _isLoading = false;
-    _ready = true;
-    notifyListeners();
   }
 
   Future<LogbookStore> _ensure() async {

@@ -350,6 +350,31 @@ void main() {
     test('a departure outside the TAF says so', () {
       final r = go('KSJC', departure: DateTime.utc(2026, 10, 20, 12));
       expect(r.tafNote, 'The TAF does not cover departure ±1 h.');
+      // Today's METAR says nothing about a departure six days away.
+      expect(r.verdict, GoVerdict.incomplete);
+      expect(r.headline, contains('Weather not checked for departure'));
+    });
+
+    test('a TAF outside minimums is not hidden by a missing METAR', () {
+      final s = snap('KDLH');
+      final r = evaluateGo(
+        legal: legal(),
+        weather: WeatherSnapshot(
+          station: s.station,
+          metarStatus: FetchStatus.noData,
+          tafStatus: s.tafStatus,
+          airportStatus: s.airportStatus,
+          fetchedAt: s.fetchedAt,
+          taf: s.taf,
+          airport: s.airport,
+        ),
+        minimums:
+            const PersonalMinimums(day: MinimumsSet(ceilingFt: 1200)),
+        departureLocal: DateTime.utc(2026, 10, 14, 12, 30),
+        now: DateTime.utc(2026, 10, 14, 12),
+      );
+      expect(r.verdict, GoVerdict.outside);
+      expect(r.headline, contains('ceiling 1000 ft < your 1200 ft'));
     });
 
     test('offline: legal section still decides, weather says why', () {

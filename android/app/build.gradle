@@ -111,7 +111,13 @@ android {
             debuggable true
         }
         release {
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            // Never fall back to the debug key: Play rejects debug-signed
+            // uploads, and a silent fallback produces an artifact that looks
+            // releasable but is not. Without android/key.properties the
+            // release build is left unsigned, so the missing key is obvious.
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
