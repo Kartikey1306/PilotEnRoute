@@ -8,8 +8,8 @@ commands; the spec has the product rules.
 
 - Store subtitle: "Logbook, currency & go/no-go"
 - Spec: [SPEC.md](SPEC.md) (in this folder)
-- Last QA verdict: **none** ([record](../../manifest/ai-office/projects/real-apps/continue/PilotEnRoute.json), last changed 2026-10-13)
-- Decisions already taken: [decision log](../../manifest/ai-office/company/decision-log.md)
+- Last QA verdict: **none** ([record](https://github.com/AmericanGroupLLC/agl-manifest/blob/master/ai-office/projects/real-apps/continue/PilotEnRoute.json), last changed 2026-10-13)
+- Decisions already taken: [decision log](https://github.com/AmericanGroupLLC/agl-manifest/blob/master/ai-office/company/decision-log.md)
 
 ## Next release
 

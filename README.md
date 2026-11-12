@@ -125,7 +125,7 @@ Reusable widgets: 4 files in `lib/shared/`
 ```bash
 ~/agl/.flutter-sdk/bin/flutter pub get && ~/agl/.flutter-sdk/bin/flutter analyze
 ~/agl/.flutter-sdk/bin/flutter test                     # unit + widget tests
-python3 ../../manifest/scripts/sim_install.py PilotEnRoute --ios   # build, install, launch, screenshot
+python3 ../agl-manifest/scripts/sim_install.py PilotEnRoute --ios   # build, install, launch, screenshot
 ~/agl/.flutter-sdk/bin/flutter drive --driver=test_driver/integration_test.dart \
   --target=integration_test/store_screenshots_test.dart --dart-define=SCREENSHOT=true -d <simulator>
 ```
