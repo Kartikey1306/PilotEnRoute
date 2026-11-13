@@ -56,7 +56,10 @@ class HomeScreen extends StatelessWidget {
     final last = _latest(logbook.entries);
     final student = settings.profile.studentPilot;
     final progress = student
-        ? privatePilotProgress(entries: logbook.entries, now: now)
+        ? privatePilotProgress(
+            entries: logbook.entries,
+            now: now,
+            confirmed: settings.progressConfirmed)
         : null;
     final readiness = practice.readiness;
 

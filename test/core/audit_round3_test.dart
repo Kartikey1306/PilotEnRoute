@@ -180,4 +180,60 @@ void main() {
       expect(const CloudLayer('VV', 300).isCeiling, isTrue);
     });
   });
+
+  group('type rating (61.57(a)/(b) "and type, if a type rating is required")',
+      () {
+    LegalityReport typed(String type, List<String> loggedTypes) =>
+        const LegalityEngine().evaluate(
+          entries: [
+            for (final t in loggedTypes)
+              LogbookEntry(
+                date: DateTime(2026, 10, 1),
+                aircraftType: t,
+                tailNumber: 'N1',
+                from: 'KPAO',
+                to: 'KPAO',
+                totalTime: 1,
+                categoryClass: 'AMEL',
+                dayTakeoffs: 3,
+                dayLandings: 3,
+                dayFullStopLandings: 3,
+              ),
+          ],
+          profile: profile,
+          flight: PlannedFlight(
+              date: flight,
+              categoryClass: 'AMEL',
+              passengers: true,
+              typeRating: type),
+        );
+
+    test('landings in another type do not count', () {
+      final r = typed('C525', ['BE58']).rule(RuleId.dayPassengers);
+      expect(r.state, isNot(RuleState.valid));
+      expect(r.shortfall, contains('C525 (type rating)'));
+    });
+
+    test('landings in the same type count, however it was written', () {
+      expect(typed('C525', ['c-525']).rule(RuleId.dayPassengers).state,
+          RuleState.valid);
+    });
+
+    test('no type rating: any type of the class counts, as before', () {
+      expect(typed('', ['BE58']).rule(RuleId.dayPassengers).state,
+          RuleState.valid);
+    });
+  });
+
+  test('61.109(a) items the logbook cannot show count once marked done', () {
+    final p = privatePilotProgress(
+        entries: const [], now: flight, confirmed: {'61.109(a)(5)(iii)'});
+    final towered =
+        p.items.firstWhere((i) => i.cite == '61.109(a)(5)(iii)');
+    expect(towered.met, isTrue);
+    expect(towered.selfConfirmed, isTrue);
+    final xc = p.items.firstWhere((i) => i.cite == '61.109(a)(5)(ii)');
+    expect(xc.met, isFalse);
+    expect(xc.tracked, isFalse);
+  });
 }

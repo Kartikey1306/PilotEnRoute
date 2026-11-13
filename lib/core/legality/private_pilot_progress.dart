@@ -56,7 +56,8 @@
 /// - (4) is counted for a practical test in the current month: dual time from
 ///   the first day of the second calendar month before it.
 /// - The logbook stores neither distances nor whether an airport is towered,
-///   so (2)(i), (5)(ii) and (5)(iii) are listed as "not tracked".
+///   so (2)(i), (5)(ii) and (5)(iii) cannot be read from it: they count
+///   only once the student marks them done ([confirmed]).
 /// - Not handled: the paragraph (k) and 61.110 exceptions, part 141, and
 ///   simulator/FTD credit.
 library;
@@ -77,6 +78,10 @@ class ProgressItem {
   /// What the logbook shows. Zero for an item that is not tracked.
   final double logged;
 
+  /// True for an item the logbook cannot show that the student has marked
+  /// done (with their instructor).
+  final bool selfConfirmed;
+
   /// False when the logbook cannot show this item at all.
   final bool tracked;
 
@@ -87,6 +92,7 @@ class ProgressItem {
     required this.required,
     required this.logged,
     this.tracked = true,
+    this.selfConfirmed = false,
   });
 
   bool get met => tracked && logged >= required - 1e-9;
@@ -144,6 +150,7 @@ double _min(double a, double b) => a < b ? a : b;
 PrivatePilotProgress privatePilotProgress({
   required List<LogbookEntry> entries,
   required DateTime now,
+  Set<String> confirmed = const {},
 }) {
   var total = 0.0, dual = 0.0, solo = 0.0;
   var dualXc = 0.0, dualNight = 0.0, dualInstrument = 0.0, testPrep = 0.0;
@@ -227,13 +234,13 @@ PrivatePilotProgress privatePilotProgress({
           unit: ProgressUnit.hours,
           required: 3,
           logged: dualNight),
-      const ProgressItem(
+      _maybeConfirmed(confirmed, const ProgressItem(
           cite: '61.109(a)(2)(i)',
           title: 'Night cross-country over 100 NM total',
           unit: ProgressUnit.count,
           required: 1,
           logged: 0,
-          tracked: false),
+          tracked: false)),
       ProgressItem(
           cite: '61.109(a)(2)(ii)',
           title: 'Night takeoffs (training)',
@@ -270,22 +277,36 @@ PrivatePilotProgress privatePilotProgress({
           unit: ProgressUnit.hours,
           required: 5,
           logged: soloXc),
-      const ProgressItem(
+      _maybeConfirmed(confirmed, const ProgressItem(
           cite: '61.109(a)(5)(ii)',
           title: 'Solo cross-country of 150 NM, three full-stop points, '
               'one leg over 50 NM',
           unit: ProgressUnit.count,
           required: 1,
           logged: 0,
-          tracked: false),
-      const ProgressItem(
+          tracked: false)),
+      _maybeConfirmed(confirmed, const ProgressItem(
           cite: '61.109(a)(5)(iii)',
           title: 'Three solo full-stop takeoffs and landings at a towered '
               'airport',
           unit: ProgressUnit.count,
           required: 3,
           logged: 0,
-          tracked: false),
+          tracked: false)),
     ],
   );
 }
+
+/// An item the logbook cannot show counts as met once the student marks it
+/// done; it is never inferred.
+ProgressItem _maybeConfirmed(Set<String> confirmed, ProgressItem item) =>
+    confirmed.contains(item.cite)
+        ? ProgressItem(
+            cite: item.cite,
+            title: item.title,
+            unit: item.unit,
+            required: item.required,
+            logged: item.required,
+            selfConfirmed: true,
+          )
+        : item;

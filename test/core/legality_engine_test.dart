@@ -52,6 +52,7 @@ final validProfile = PilotProfile(
   age40OrOlderAtExam: false,
   flightReviewDate: DateTime(2026, 1, 10),
   instrumentRated: true,
+  ifrCurrentAtLogbookStart: true,
   homeCategoryClass: 'ASEL',
 );
 
@@ -475,10 +476,50 @@ void main() {
       expect(rep.legal, isTrue);
     });
 
-    test('61.57(c): the assumption before any IPC is stated', () {
-      final r = run(tasks(DateTime(2026, 9, 1)), oct14, ifr: true)
+    test('61.57(d): with no IPC, checkride or stated start, tasks alone are '
+        'not confirmed', () {
+      final r = run(tasks(DateTime(2026, 9, 1)), oct14,
+              ifr: true,
+              profile: validProfile.copyWith(ifrCurrentAtLogbookStart: false))
           .rule(RuleId.ifr);
-      expect(r.notes.single, contains('Assumes you were IFR current'));
+      expect(r.state, RuleState.unknown);
+      expect(r.summary, contains('not confirmed'));
+      expect(r.shortfall, contains('checkride or last IPC'));
+      expect(r.notes.single, contains('No IPC or instrument checkride'));
+    });
+
+    test('61.57(d): a checkride date in the profile anchors it', () {
+      final r = run(tasks(DateTime(2026, 9, 1)), oct14,
+              ifr: true,
+              profile: validProfile.copyWith(
+                  ifrCurrentAtLogbookStart: false,
+                  instrumentCheckDate: DateTime(2026, 6, 1)))
+          .rule(RuleId.ifr);
+      expect(r.state, RuleState.valid);
+      expect(r.notes, isEmpty);
+    });
+
+    test('61.57(d): a checkride long before a lapse does not anchor tasks '
+        'flown after the grace ran out', () {
+      // Checkride Jan 2024 → current through Jul 2024, grace to Jan 2025.
+      // Tasks in Sep 2026 come after the grace: an IPC is needed.
+      final r = run(tasks(DateTime(2026, 9, 1)), oct14,
+              ifr: true,
+              profile: validProfile.copyWith(
+                  ifrCurrentAtLogbookStart: false,
+                  instrumentCheckDate: DateTime(2024, 1, 15)))
+          .rule(RuleId.ifr);
+      expect(r.state, RuleState.ipcRequired);
+    });
+
+    test('61.57(c): a checkride after the flight is ignored', () {
+      final r = run(tasks(DateTime(2026, 9, 1)), oct14,
+              ifr: true,
+              profile: validProfile.copyWith(
+                  ifrCurrentAtLogbookStart: false,
+                  instrumentCheckDate: DateTime(2027, 1, 1)))
+          .rule(RuleId.ifr);
+      expect(r.state, RuleState.unknown);
     });
   });
 

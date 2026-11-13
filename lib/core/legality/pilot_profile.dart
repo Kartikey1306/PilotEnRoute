@@ -69,6 +69,15 @@ class PilotProfile {
 
   final bool instrumentRated;
 
+  /// Instrument rating checkride or most recent IPC. Anchors IFR currency
+  /// (61.57(d)) so it does not rest on the logbook's first page.
+  final DateTime? instrumentCheckDate;
+
+  /// The pilot states they were IFR current (or within the 6-month grace)
+  /// when this logbook's first entry was made. Anchors 61.57(d) like an IPC
+  /// at the logbook's start.
+  final bool ifrCurrentAtLogbookStart;
+
   final bool studentPilot;
 
   /// Student solo endorsement date (61.87(n)).
@@ -88,6 +97,8 @@ class PilotProfile {
     this.basicMedCourseDate,
     this.flightReviewDate,
     this.instrumentRated = false,
+    this.instrumentCheckDate,
+    this.ifrCurrentAtLogbookStart = false,
     this.studentPilot = false,
     this.soloEndorsementDate,
     this.homeCategoryClass = '',
@@ -106,6 +117,8 @@ class PilotProfile {
         'basicMedCourseDate': basicMedCourseDate?.toIso8601String(),
         'flightReviewDate': flightReviewDate?.toIso8601String(),
         'instrumentRated': instrumentRated,
+        'instrumentCheckDate': instrumentCheckDate?.toIso8601String(),
+        'ifrCurrentAtLogbookStart': ifrCurrentAtLogbookStart,
         'studentPilot': studentPilot,
         'soloEndorsementDate': soloEndorsementDate?.toIso8601String(),
         'homeCategoryClass': homeCategoryClass,
@@ -125,6 +138,8 @@ class PilotProfile {
       basicMedCourseDate: date('basicMedCourseDate'),
       flightReviewDate: date('flightReviewDate'),
       instrumentRated: j['instrumentRated'] == true,
+      instrumentCheckDate: date('instrumentCheckDate'),
+      ifrCurrentAtLogbookStart: j['ifrCurrentAtLogbookStart'] == true,
       studentPilot: j['studentPilot'] == true,
       soloEndorsementDate: date('soloEndorsementDate'),
       homeCategoryClass: (j['homeCategoryClass'] ?? '').toString(),
@@ -147,6 +162,9 @@ class PilotProfile {
     DateTime? flightReviewDate,
     bool clearFlightReviewDate = false,
     bool? instrumentRated,
+    DateTime? instrumentCheckDate,
+    bool clearInstrumentCheckDate = false,
+    bool? ifrCurrentAtLogbookStart,
     bool? studentPilot,
     DateTime? soloEndorsementDate,
     bool clearSoloEndorsementDate = false,
@@ -172,6 +190,11 @@ class PilotProfile {
           ? null
           : (flightReviewDate ?? this.flightReviewDate),
       instrumentRated: instrumentRated ?? this.instrumentRated,
+      instrumentCheckDate: clearInstrumentCheckDate
+          ? null
+          : (instrumentCheckDate ?? this.instrumentCheckDate),
+      ifrCurrentAtLogbookStart:
+          ifrCurrentAtLogbookStart ?? this.ifrCurrentAtLogbookStart,
       studentPilot: studentPilot ?? this.studentPilot,
       soloEndorsementDate: clearSoloEndorsementDate
           ? null

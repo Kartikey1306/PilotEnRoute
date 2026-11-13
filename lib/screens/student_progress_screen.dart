@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../core/legality/private_pilot_progress.dart';
 import '../services/logbook_service.dart';
+import '../services/settings_store.dart';
 import '../ui/status_tag.dart';
 import '../ui/theme.dart';
 import '../ui/widgets.dart';
@@ -19,7 +20,11 @@ class StudentProgressScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final svc = context.watch<LogbookService>();
     final now = (clock ?? DateTime.now)();
-    final p = privatePilotProgress(entries: svc.entries, now: now);
+    final settings = context.watch<SettingsStore>();
+    final p = privatePilotProgress(
+        entries: svc.entries,
+        now: now,
+        confirmed: settings.progressConfirmed);
     final scheme = Theme.of(context).colorScheme;
     final small = TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant);
     return Scaffold(
@@ -36,7 +41,7 @@ class StudentProgressScreen extends StatelessWidget {
               text: 'No flights logged yet. Log your lessons and solo flights '
                   'and this shows what is left.',
             ),
-          for (final item in p.items) _row(context, item),
+          for (final item in p.items) _row(context, item, settings),
           const SizedBox(height: 12),
           if (p.mixedEntries > 0)
             NoticeLine(
@@ -78,7 +83,8 @@ class StudentProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _row(BuildContext context, ProgressItem item) {
+  Widget _row(
+      BuildContext context, ProgressItem item, SettingsStore settings) {
     final scheme = Theme.of(context).colorScheme;
     final look = !item.tracked
         ? const StatusLook('CHECK', Icons.help_outline, Tone.neutral)
@@ -107,12 +113,16 @@ class StudentProgressScreen extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             fontSize: 16)),
                     Text(
-                      item.tracked
+                      item.selfConfirmed
+                          ? '${item.cite} · Marked done by you'
+                          : item.tracked
                           ? '${item.cite} · ${item.progressText}'
                           : '${item.cite} · The logbook does not record '
                               'this. Confirm it with your instructor.',
                       style: TextStyle(
-                          fontFamily: item.tracked ? AppFonts.mono : null,
+                          fontFamily: item.tracked && !item.selfConfirmed
+                              ? AppFonts.mono
+                              : null,
                           fontSize: 13,
                           color: scheme.onSurfaceVariant),
                     ),
@@ -123,7 +133,18 @@ class StudentProgressScreen extends StatelessWidget {
               StatusTag(look),
             ],
           ),
-          if (item.tracked) ...[
+          if (!item.tracked || item.selfConfirmed)
+            CheckboxListTile(
+              key: Key('progress-confirm-${item.cite}'),
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Done (checked with my instructor)'),
+              value: item.selfConfirmed,
+              onChanged: (v) =>
+                  settings.setProgressConfirmed(item.cite, v ?? false),
+            ),
+          if (item.tracked && !item.selfConfirmed) ...[
             const SizedBox(height: 6),
             ClipRRect(
               borderRadius: Rbf.corners,

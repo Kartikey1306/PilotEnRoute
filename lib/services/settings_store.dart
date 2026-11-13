@@ -17,29 +17,37 @@ class SettingsStore extends ChangeNotifier {
     PilotProfile profile = PilotProfile.empty,
     PersonalMinimums minimums = PersonalMinimums.blank,
     Set<ReminderKind>? reminderKinds,
+    Set<String>? progressConfirmed,
   })  : _onboardingDone = onboardingDone,
         _homeAirport = homeAirport,
         _profile = profile,
         _minimums = minimums,
-        _reminderKinds = {...(reminderKinds ?? ReminderKind.values)};
+        _reminderKinds = {...(reminderKinds ?? ReminderKind.values)},
+        _progressConfirmed = {...?progressConfirmed};
 
   static const kOnboarding = 'onboarding_done_v1';
   static const kHomeAirport = 'home_airport';
   static const kProfile = 'pilot_profile_v1';
   static const kMinimums = 'personal_minimums_v1';
   static const kReminderKinds = 'reminder_kinds_v1';
+  static const kProgressConfirmed = 'ppl_progress_confirmed_v1';
 
   bool _onboardingDone;
   String _homeAirport;
   PilotProfile _profile;
   PersonalMinimums _minimums;
   final Set<ReminderKind> _reminderKinds;
+  final Set<String> _progressConfirmed;
 
   bool get onboardingDone => _onboardingDone;
   String get homeAirport => _homeAirport;
   PilotProfile get profile => _profile;
   PersonalMinimums get minimums => _minimums;
   Set<ReminderKind> get reminderKinds => Set.unmodifiable(_reminderKinds);
+
+  /// 61.109(a) items the logbook cannot show (distances, towered airports)
+  /// that the student has marked done, by citation.
+  Set<String> get progressConfirmed => Set.unmodifiable(_progressConfirmed);
 
   /// Reads what was saved. Missing or unreadable values fall back to the
   /// empty defaults — never to sample data.
@@ -72,6 +80,7 @@ class SettingsStore extends ChangeNotifier {
       minimums: PersonalMinimums.fromJson(json(kMinimums)),
       reminderKinds:
           kinds?.map(ReminderKind.fromName).whereType<ReminderKind>().toSet(),
+      progressConfirmed: prefs.getStringList(kProgressConfirmed)?.toSet(),
     );
   }
 
@@ -111,6 +120,13 @@ class SettingsStore extends ChangeNotifier {
     notifyListeners();
     await (await _prefs)
         .setStringList(kReminderKinds, _reminderKinds.map((k) => k.name).toList());
+  }
+
+  Future<void> setProgressConfirmed(String cite, bool done) async {
+    done ? _progressConfirmed.add(cite) : _progressConfirmed.remove(cite);
+    notifyListeners();
+    await (await _prefs)
+        .setStringList(kProgressConfirmed, _progressConfirmed.toList());
   }
 
   Future<void> completeOnboarding() async {

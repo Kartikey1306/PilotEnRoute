@@ -30,6 +30,7 @@ void main() {
     age40OrOlderAtExam: true,
     flightReviewDate: DateTime(2025, 2, 3), // through 28 Feb 2027
     instrumentRated: true,
+    ifrCurrentAtLogbookStart: true,
     homeCategoryClass: 'ASEL',
   );
 

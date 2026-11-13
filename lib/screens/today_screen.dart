@@ -37,6 +37,8 @@ class TodayScreen extends StatefulWidget {
 class _TodayScreenState extends State<TodayScreen> {
   final _dep = TextEditingController();
   final _dest = TextEditingController();
+  final _type = TextEditingController();
+  bool _typeRated = false;
   late DateTime _departure;
   String _categoryClass = '';
   bool _tailwheel = false;
@@ -85,6 +87,7 @@ class _TodayScreenState extends State<TodayScreen> {
   void dispose() {
     _dep.dispose();
     _dest.dispose();
+    _type.dispose();
     super.dispose();
   }
 
@@ -106,6 +109,7 @@ class _TodayScreenState extends State<TodayScreen> {
         passengers: _passengers,
         night: _night,
         ifr: _ifr,
+        typeRating: _typeRated ? _type.text.trim() : '',
       );
 
   /// [auto]: the check made on opening the Go Card. It is not saved when
@@ -202,7 +206,7 @@ class _TodayScreenState extends State<TodayScreen> {
       builder: (_) => LogbookEntryScreen(
         prefill: LogbookEntry(
           date: _departure,
-          aircraftType: '',
+          aircraftType: _typeRated ? _type.text.trim().toUpperCase() : '',
           tailNumber: '',
           from: dep,
           to: dest.isEmpty ? dep : dest,
@@ -476,8 +480,29 @@ class _TodayScreenState extends State<TodayScreen> {
                 selected: _tailwheel,
                 onSelected: (v) => setState(() => _tailwheel = v),
               ),
+              FilterChip(
+                key: const Key('go-type-rated'),
+                label: const Text('Type rating'),
+                selected: _typeRated,
+                onSelected: (v) => setState(() => _typeRated = v),
+              ),
             ],
           ),
+          if (_typeRated)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: TextField(
+                key: const Key('go-type'),
+                controller: _type,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'Aircraft type (as logged, e.g. C525)',
+                  helperText: 'Only landings logged in this type count '
+                      '(61.57(a), (b))',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,

@@ -30,6 +30,11 @@ class PlannedFlight {
   final bool night;
   final bool ifr;
 
+  /// The type designator ("C525", "B737") when the aircraft needs a type
+  /// rating; empty when it does not. 61.57(a) and (b) then count only
+  /// takeoffs and landings logged in that type.
+  final String typeRating;
+
   const PlannedFlight({
     required this.date,
     required this.categoryClass,
@@ -37,6 +42,7 @@ class PlannedFlight {
     this.passengers = false,
     this.night = false,
     this.ifr = false,
+    this.typeRating = '',
   });
 
   DateTime get day => dateOnly(date);
@@ -267,6 +273,7 @@ class LegalityEngine {
     final matching = usable
         .where((e) => CategoryClass.same(e.categoryClass, cc))
         .where((e) => !tw || e.tailwheel)
+        .where((e) => _sameType(e, flight))
         .toList();
     int landingsOf(LogbookEntry e) => tw ? e.fullStopLandings : e.totalLandings;
 
@@ -276,7 +283,9 @@ class LegalityEngine {
       landings: landingsOf,
     );
     final aircraft = _withArticle(
-        '${tw ? 'tailwheel ' : ''}${cc.isEmpty ? 'aircraft with no category/class' : cc}');
+        flight.typeRating.trim().isNotEmpty
+            ? '${flight.typeRating.trim().toUpperCase()} (type rating)'
+            : '${tw ? 'tailwheel ' : ''}${cc.isEmpty ? 'aircraft with no category/class' : cc}');
     final landingWord = tw ? 'full-stop landings' : 'landings';
     return _ninetyDayRule(
       id: RuleId.dayPassengers,
@@ -308,7 +317,10 @@ class LegalityEngine {
   RuleStatus _nightPassengers(List<LogbookEntry> usable, PlannedFlight flight) {
     final cc = flight.categoryClass;
     final matching =
-        usable.where((e) => CategoryClass.same(e.categoryClass, cc)).toList();
+        usable
+            .where((e) => CategoryClass.same(e.categoryClass, cc))
+            .where((e) => _sameType(e, flight))
+            .toList();
     final anchor = _anchorDate(
       matching,
       takeoffs: (e) => e.nightTakeoffs,
@@ -489,23 +501,48 @@ class LegalityEngine {
         .toList()
       ..sort((a, b) => a.date.compareTo(b.date));
 
+    // The instrument checkride or last IPC from the profile anchors the
+    // history like a logged IPC (61.57(d)); one after the flight is ignored.
+    final profileAnchor = profile.instrumentCheckDate == null
+        ? null
+        : dateOnly(profile.instrumentCheckDate!);
+    final anchorDay =
+        profileAnchor == null || profileAnchor.isAfter(flight.day)
+            ? null
+            : profileAnchor;
+
     DateTime? through; // currency valid through (inclusive)
     var lockedOut = false;
+    var anchorApplied = anchorDay == null;
+    void applyIpc(DateTime day) {
+      lockedOut = false;
+      through = _later(through, endOfMonthAfter(day, 6));
+    }
+
     final seen = <LogbookEntry>[];
     for (final e in oldestFirst) {
+      if (!anchorApplied && e.day.isAfter(anchorDay!)) {
+        applyIpc(anchorDay);
+        anchorApplied = true;
+      }
       seen.add(e);
-      if (through != null && e.day.isAfter(_graceEnd(through))) {
+      if (through != null && e.day.isAfter(_graceEnd(through!))) {
         lockedOut = true;
       }
-      if (e.ipc) {
-        lockedOut = false;
-        final ipcThrough = endOfMonthAfter(e.day, 6);
-        through = _later(through, ipcThrough);
-      }
+      if (e.ipc) applyIpc(e.day);
       if (!lockedOut) {
         through = _later(through, _tasksThrough(seen));
       }
     }
+    if (!anchorApplied) {
+      applyIpc(anchorDay!);
+    }
+    // Without an IPC or checkride on record, currency from tasks alone rests
+    // on an unknowable start: was the pilot more than 6 months lapsed before
+    // the logbook begins? Then those tasks needed an IPC first (61.57(d)).
+    final anchored = anchorDay != null ||
+        profile.ifrCurrentAtLogbookStart ||
+        oldestFirst.any((e) => e.ipc);
 
     final f = flight.day;
     // What is on record in the window for this flight's month.
@@ -528,9 +565,9 @@ class LegalityEngine {
     }
 
     final notes = <String>[
-      if (!oldestFirst.any((e) => e.ipc))
-        'Assumes you were IFR current when this logbook starts; log an IPC to '
-            'anchor it.',
+      if (!anchored)
+        'No IPC or instrument checkride on record, so it cannot be shown you '
+            'were not more than 6 months lapsed before this logbook starts.',
     ];
 
     if (through == null) {
@@ -549,7 +586,24 @@ class LegalityEngine {
         notes: notes,
       );
     }
-    if (!f.isAfter(through)) {
+    final throughDay = through!;
+    if (!f.isAfter(throughDay) && !anchored) {
+      return RuleStatus(
+        id: RuleId.ifr,
+        title: 'IFR',
+        cite: cite,
+        shortLabel: label,
+        required: flight.ifr,
+        state: RuleState.unknown,
+        validThrough: throughDay,
+        summary: 'Tasks on record through ${dayMonthYear(throughDay)}; '
+            'not confirmed',
+        shortfall: 'Add your instrument checkride or last IPC date in your '
+            'profile (or log an IPC) so this can be confirmed (61.57(d)).',
+        notes: notes,
+      );
+    }
+    if (!f.isAfter(throughDay)) {
       return RuleStatus(
         id: RuleId.ifr,
         title: 'IFR',
@@ -557,14 +611,14 @@ class LegalityEngine {
         shortLabel: label,
         required: flight.ifr,
         state: RuleState.valid,
-        validThrough: through,
-        summary: 'Valid through ${dayMonthYear(through)}',
+        validThrough: throughDay,
+        summary: 'Valid through ${dayMonthYear(throughDay)}',
         notes: notes,
       );
     }
-    final graceEnd = _graceEnd(through);
+    final graceEnd = _graceEnd(throughDay);
     final inGrace = !lockedOut && !f.isAfter(graceEnd);
-    final lapsed = addDays(through, 1);
+    final lapsed = addDays(throughDay, 1);
     return RuleStatus(
       id: RuleId.ifr,
       title: 'IFR',
@@ -572,7 +626,7 @@ class LegalityEngine {
       shortLabel: label,
       required: flight.ifr,
       state: inGrace ? RuleState.grace : RuleState.ipcRequired,
-      validThrough: through,
+      validThrough: throughDay,
       summary: 'Lapsed on ${dayMonthYear(lapsed)}',
       shortfall: inGrace
           ? 'Until ${dayMonthYear(graceEnd)} you can regain it with a safety '
@@ -613,6 +667,15 @@ class LegalityEngine {
     if (hold.isBefore(oldest)) oldest = hold;
     if (track.isBefore(oldest)) oldest = track;
     return endOfMonthAfter(oldest, 6);
+  }
+
+  /// "(and type, if a type rating is required)": with a type rating, only
+  /// entries in that aircraft type count. Spacing, case and dashes are
+  /// ignored, so "c-525" matches "C525".
+  bool _sameType(LogbookEntry e, PlannedFlight flight) {
+    String norm(String s) => s.toUpperCase().replaceAll(RegExp(r'[\s\-]'), '');
+    final want = norm(flight.typeRating);
+    return want.isEmpty || norm(e.aircraftType) == want;
   }
 
   String _category(String cc) {

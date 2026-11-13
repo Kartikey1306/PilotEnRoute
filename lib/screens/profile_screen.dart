@@ -276,6 +276,29 @@ class MedicalForm extends StatelessWidget {
           value: p.instrumentRated,
           onChanged: (v) => onChanged(p.copyWith(instrumentRated: v)),
         ),
+        if (p.instrumentRated) ...[
+          _dateButton(context, 'Instrument checkride or last IPC',
+              p.instrumentCheckDate,
+              (d) => onChanged(p.copyWith(instrumentCheckDate: d)),
+              key: const Key('instrument-check-date')),
+          Text(
+            'Without it, IFR currency from approaches alone cannot be '
+            'confirmed: a pilot more than 6 months lapsed needs an IPC first '
+            '(61.57(d)). Logged IPCs count too.',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+          SwitchListTile(
+            key: const Key('ifr-current-at-start'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('I was IFR current when this logbook starts'),
+            subtitle: const Text('Or within 6 months of lapsing. Use this if '
+                'your checkride or last IPC is in an older logbook.'),
+            value: p.ifrCurrentAtLogbookStart,
+            onChanged: (v) =>
+                onChanged(p.copyWith(ifrCurrentAtLogbookStart: v)),
+          ),
+          const SizedBox(height: 8),
+        ],
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Student pilot'),

@@ -77,7 +77,7 @@ void main() {
           .evaluate(
             entries: service.entries,
             profile: const PilotProfile(
-                instrumentRated: true, homeCategoryClass: 'ASEL'),
+                instrumentRated: true, ifrCurrentAtLogbookStart: true, homeCategoryClass: 'ASEL'),
             flight: PlannedFlight(
               date: DateTime.now(),
               categoryClass: 'ASEL',
