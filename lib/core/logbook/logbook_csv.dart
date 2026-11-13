@@ -64,13 +64,13 @@ String _yn(bool b) => b ? 'Y' : '';
 
 List<String> csvRow(LogbookEntry e) => [
       isoDate(e.date),
-      e.aircraftType,
-      e.tailNumber,
-      e.categoryClass,
+      csvText(e.aircraftType),
+      csvText(e.tailNumber),
+      csvText(e.categoryClass),
       _yn(e.tailwheel),
-      e.from,
-      e.to,
-      e.route,
+      csvText(e.from),
+      csvText(e.to),
+      csvText(e.route),
       _h(e.totalTime),
       _h(e.picTime),
       _h(e.sicTime),
@@ -94,7 +94,7 @@ List<String> csvRow(LogbookEntry e) => [
       _yn(e.practicalTest),
       e.conditions,
       _yn(e.nightFlight),
-      e.remarks,
+      csvText(e.remarks),
     ];
 
 /// The whole logbook, oldest flight first, header included.
@@ -138,7 +138,9 @@ List<(int, List<String>)> _parseCsv(String text) {
 
   void endRecord() {
     endField();
-    if (!(record.length == 1 && record.first.isEmpty)) {
+    // Spreadsheets often save trailing rows of empty cells (",,,,"):
+    // those are blank lines, not records.
+    if (!record.every((f) => f.isEmpty)) {
       records.add((recordLine, record));
     }
     record = <String>[];
@@ -269,9 +271,9 @@ CsvImportResult logbookFromCsv(String text,
       return i < row.length ? row[i].trim() : '';
     }
 
-    final problems = <String>[];
+    String t(String h) => csvUntext(v(h));    final problems = <String>[];
     double hours(String h) {
-      final p = parseHours(v(h));
+      final p = parseHours(_hhmm(v(h)));
       if (!p.ok) problems.add('$h: ${p.error}');
       return p.value ?? 0;
     }
@@ -300,6 +302,13 @@ CsvImportResult logbookFromCsv(String text,
       final candidate = DateTime(y, mo, d);
       if (candidate.month == mo && candidate.day == d) date = candidate;
     }
+    // Excel re-saves ISO dates as US month/day/year.
+    final us = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(dateText);
+    if (date == null && us != null) {
+      final mo = int.parse(us[1]!), d = int.parse(us[2]!), y = int.parse(us[3]!);
+      final candidate = DateTime(y, mo, d);
+      if (candidate.month == mo && candidate.day == d) date = candidate;
+    }
     if (date == null) problems.add('Date: expected YYYY-MM-DD');
 
     final rules = v('Flight rules').toUpperCase();
@@ -309,13 +318,13 @@ CsvImportResult logbookFromCsv(String text,
 
     final entry = LogbookEntry(
       date: date ?? DateTime(1970),
-      aircraftType: v('Aircraft type'),
-      tailNumber: v('Tail number'),
-      categoryClass: v('Category/class'),
+      aircraftType: t('Aircraft type'),
+      tailNumber: t('Tail number'),
+      categoryClass: t('Category/class'),
       tailwheel: flag('Tailwheel'),
-      from: v('From'),
-      to: v('To'),
-      route: v('Route'),
+      from: t('From'),
+      to: t('To'),
+      route: t('Route'),
       totalTime: hours('Total'),
       picTime: hours('PIC'),
       sicTime: hours('SIC'),
@@ -339,7 +348,7 @@ CsvImportResult logbookFromCsv(String text,
       practicalTest: flag('Practical test'),
       conditions: rules.isEmpty ? 'VFR' : rules,
       nightFlight: flag('Night flight'),
-      remarks: row[col['Remarks']!],
+      remarks: csvUntext(row[col['Remarks']!]),
     );
 
     if (problems.isEmpty) {
@@ -363,4 +372,24 @@ CsvImportResult logbookFromCsv(String text,
   }
   return CsvImportResult(
       entries: entries, duplicates: duplicates, errors: errors);
+}
+
+/// Free text for a spreadsheet cell. A cell starting with = + - @ (or a tab
+/// or CR) is run as a formula by Excel and Sheets — "=HYPERLINK(…)" in a
+/// remark would become a live link — so it gets a leading apostrophe, which
+/// spreadsheets show as plain text and [csvUntext] removes again.
+String csvText(String value) =>
+    RegExp(r'^[=+\-@\t\r]').hasMatch(value) ? "'$value" : value;
+
+/// Reverses [csvText].
+String csvUntext(String value) =>
+    RegExp(r"^'[=+\-@\t\r]").hasMatch(value) ? value.substring(1) : value;
+
+/// "1:30" (hours:minutes, as some logbooks and spreadsheets write time) as
+/// decimal hours "1.5"; anything else unchanged.
+String _hhmm(String s) {
+  final m = RegExp(r'^(\d+):([0-5]\d)$').firstMatch(s);
+  if (m == null) return s;
+  final h = int.parse(m[1]!) + int.parse(m[2]!) / 60;
+  return h.toString();
 }

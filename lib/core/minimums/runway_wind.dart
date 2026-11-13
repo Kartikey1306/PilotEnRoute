@@ -36,8 +36,11 @@ class RunwayWind {
   int get crosswindKt => crosswind.round();
   int? get gustCrosswindKt => gustCrosswind?.round();
 
-  /// The larger of steady and gust crosswind, rounded — what a limit is
+  /// The larger of steady and gust crosswind, unrounded — what a limit is
   /// compared with.
+  double get worstCrosswind => math.max(crosswind, gustCrosswind ?? 0);
+
+  /// [worstCrosswind] rounded, for display.
   int get worstCrosswindKt =>
       math.max(crosswindKt, gustCrosswindKt ?? 0);
 

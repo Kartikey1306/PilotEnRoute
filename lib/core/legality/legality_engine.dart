@@ -647,9 +647,14 @@ class LegalityEngine {
             '(61.56(g))',
       );
     }
-    DateTime? latest = profile.flightReviewDate == null
+    // 61.56(c): a review dated after the flight (a typo, or a booked date)
+    // does not count for it.
+    final fromProfile = profile.flightReviewDate == null
         ? null
         : dateOnly(profile.flightReviewDate!);
+    DateTime? latest = fromProfile == null || fromProfile.isAfter(f)
+        ? null
+        : fromProfile;
     for (final e in usable) {
       if ((e.flightReview || e.practicalTest) &&
           (latest == null || e.day.isAfter(latest))) {
@@ -723,6 +728,20 @@ class LegalityEngine {
             state: RuleState.unknown,
             summary: '${profile.medicalKind.label}: no exam date',
             shortfall: 'Add the exam date shown on your medical certificate.',
+          );
+        }
+        // 61.23(d): the exam must come before acting as PIC.
+        if (dateOnly(exam).isAfter(f)) {
+          return RuleStatus(
+            id: RuleId.medical,
+            title: 'Medical',
+            cite: cite,
+            shortLabel: 'medical',
+            required: true,
+            state: RuleState.lapsed,
+            summary: 'Exam date ${dayMonthYear(dateOnly(exam))} is after this flight',
+            shortfall: 'A medical examined after the flight does not cover '
+                'it. Check the exam date in Settings.',
           );
         }
         final age = profile.age40OrOlderAtExam;
@@ -807,6 +826,22 @@ class LegalityEngine {
             ? 'No comprehensive medical exam date'
             : 'No medical education course date',
         shortfall: 'Add both BasicMed dates in Settings.',
+      );
+    }
+    // 61.23(c)(3): both must be done before acting as PIC.
+    final later = dateOnly(exam).isAfter(dateOnly(course)) ? exam : course;
+    if (dateOnly(later).isAfter(f)) {
+      return RuleStatus(
+        id: RuleId.medical,
+        title: 'Medical (BasicMed)',
+        cite: cite,
+        shortLabel: 'BasicMed',
+        required: true,
+        state: RuleState.lapsed,
+        summary: '${identical(later, exam) ? 'Exam' : 'Course'} date '
+            '${dayMonthYear(dateOnly(later))} is after this flight',
+        shortfall: 'BasicMed done after the flight does not cover it. '
+            'Check the dates in Settings.',
       );
     }
     final examThrough = endOfMonthAfter(exam, 48);

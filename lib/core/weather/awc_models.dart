@@ -82,7 +82,8 @@ class CloudLayer {
   final int? baseFt;
   const CloudLayer(this.cover, this.baseFt);
 
-  bool get isCeiling => cover == 'BKN' || cover == 'OVC' || cover == 'OVX';
+  bool get isCeiling =>
+      cover == 'BKN' || cover == 'OVC' || cover == 'OVX' || cover == 'VV';
 
   static List<CloudLayer> listFrom(Object? raw) {
     if (raw is! List) return const [];
@@ -90,7 +91,7 @@ class CloudLayer {
       for (final c in raw)
         if (c is Map)
           CloudLayer((c['cover'] ?? '').toString().toUpperCase(),
-              (c['base'] as num?)?.toInt()),
+              _n(c['base'])?.toInt()),
     ];
   }
 }
@@ -134,13 +135,13 @@ class Wind {
 
   static Wind? from(Object? wdir, Object? wspd, Object? wgst) {
     if (wspd == null && wdir == null) return null;
-    final speed = (wspd as num?)?.toInt() ?? 0;
-    final gust = (wgst as num?)?.toInt();
+    final speed = _n(wspd)?.toInt() ?? 0;
+    final gust = _n(wgst)?.toInt();
     if (wdir is String && wdir.toUpperCase() == 'VRB') {
       return Wind(
           directionTrue: null, variable: true, speedKt: speed, gustKt: gust);
     }
-    final dir = (wdir as num?)?.toInt();
+    final dir = _n(wdir)?.toInt();
     return Wind(
       directionTrue: speed == 0 ? null : dir,
       variable: false,
@@ -228,14 +229,14 @@ class MetarObservation {
       clouds: clouds,
       ceilingFt: ceilingFrom(clouds,
           vertVisFt: j['vertVis'] is num
-              ? ((j['vertVis'] as num) * 100).round()
+              ? ((_n(j['vertVis']) ?? 0) * 100).round()
               : null),
       flightCategory: (j['fltCat'] ?? '').toString(),
-      tempC: (j['temp'] as num?)?.toDouble(),
-      dewpointC: (j['dewp'] as num?)?.toDouble(),
-      altimeterHpa: (j['altim'] as num?)?.toDouble(),
-      lat: (j['lat'] as num?)?.toDouble(),
-      lon: (j['lon'] as num?)?.toDouble(),
+      tempC: _n(j['temp'])?.toDouble(),
+      dewpointC: _n(j['dewp'])?.toDouble(),
+      altimeterHpa: _n(j['altim'])?.toDouble(),
+      lat: _n(j['lat'])?.toDouble(),
+      lon: _n(j['lon'])?.toDouble(),
     );
   }
 }
@@ -281,7 +282,7 @@ class TafGroup {
 
   factory TafGroup.fromJson(Map<dynamic, dynamic> j) {
     DateTime t(Object? v) =>
-        DateTime.fromMillisecondsSinceEpoch(((v as num?) ?? 0).toInt() * 1000,
+        DateTime.fromMillisecondsSinceEpoch((_n(v) ?? 0).toInt() * 1000,
             isUtc: true);
     final clouds = CloudLayer.listFrom(j['clouds']);
     final hasWind = j['wspd'] != null || j['wdir'] != null;
@@ -289,12 +290,12 @@ class TafGroup {
       fromUtc: t(j['timeFrom']),
       toUtc: t(j['timeTo']),
       change: j['fcstChange']?.toString(),
-      probability: (j['probability'] as num?)?.toInt(),
+      probability: _n(j['probability'])?.toInt(),
       wind: hasWind ? Wind.from(j['wdir'], j['wspd'], j['wgst']) : null,
       visibility: Visibility.parse(j['visib']),
       clouds: clouds,
       ceilingFt:
-          ceilingFrom(clouds, vertVisFt: (j['vertVis'] as num?)?.round()),
+          ceilingFrom(clouds, vertVisFt: _n(j['vertVis'])?.round()),
       weather: j['wxString']?.toString(),
     );
   }
@@ -463,8 +464,12 @@ class AirportReference {
       frequencies: frequencies,
       runways: runways,
       runwayInfo: info,
-      lat: (json['lat'] as num?)?.toDouble(),
-      lon: (json['lon'] as num?)?.toDouble(),
+      lat: _n(json['lat'])?.toDouble(),
+      lon: _n(json['lon'])?.toDouble(),
     );
   }
 }
+
+/// A number from AWC JSON, which is a number almost always — but a numeric
+/// string ("280") must not take the whole weather snapshot down.
+num? _n(Object? v) => v is num ? v : (v is String ? num.tryParse(v.trim()) : null);

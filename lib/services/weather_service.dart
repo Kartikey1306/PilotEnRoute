@@ -195,7 +195,7 @@ class WeatherService extends ChangeNotifier {
   Future<List<Map<String, dynamic>>> fetchPireps({String? icao}) async {
     try {
       String url = '$awcBase/pirep?format=json&age=2';
-      if (icao != null) url += '&id=$icao';
+      if (icao != null) url += '&id=${Uri.encodeQueryComponent(icao)}';
       final response = await http
           .get(Uri.parse(url))
           .timeout(const Duration(seconds: 15));

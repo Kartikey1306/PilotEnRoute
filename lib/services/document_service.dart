@@ -79,8 +79,10 @@ class PilotDocument {
     final e = expiryDate;
     if (e == null) return null;
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(e.year, e.month, e.day);
+    // Calendar days in UTC: a local "midnight to midnight" span is 23 h
+    // across a spring-forward change and would lose a day.
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final target = DateTime.utc(e.year, e.month, e.day);
     return target.difference(today).inDays;
   }
 
@@ -166,6 +168,13 @@ class DocumentService extends ChangeNotifier {
   bool _isLoading = false;
   bool _initialized = false;
 
+  /// Stored records that could not be read, kept as they were so saving
+  /// never deletes them.
+  final List<Object?> _unreadable = [];
+
+  /// How many stored documents could not be read.
+  int get unreadableCount => _unreadable.length;
+
   List<PilotDocument> get documents => List.unmodifiable(_documents);
   bool get isLoading => _isLoading;
   bool get isInitialized => _initialized;
@@ -202,17 +211,32 @@ class DocumentService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_prefsKey);
       if (raw != null && raw.isNotEmpty) {
-        final decoded = jsonDecode(raw);
+        Object? decoded;
+        try {
+          decoded = jsonDecode(raw);
+        } on FormatException {
+          // Never let the next save overwrite what could not be read: keep
+          // a copy of it aside.
+          await prefs.setString('${_prefsKey}_unreadable', raw);
+        }
         if (decoded is List) {
-          _documents = decoded
-              .whereType<Map<String, dynamic>>()
-              .map(PilotDocument.fromJson)
-              .toList();
+          // One damaged record must not cost the pilot every other
+          // document: read each on its own and carry the rest through.
+          final docs = <PilotDocument>[];
+          _unreadable.clear();
+          for (final item in decoded) {
+            try {
+              docs.add(PilotDocument.fromJson(item as Map<String, dynamic>));
+            } catch (e) {
+              debugPrint('DocumentService: skipped an unreadable record: $e');
+              _unreadable.add(item);
+            }
+          }
+          _documents = docs;
         }
       }
     } catch (e) {
       debugPrint('DocumentService.init failed: $e');
-      _documents = [];
     }
     _sort();
     _initialized = true;
@@ -227,7 +251,8 @@ class DocumentService extends ChangeNotifier {
   Future<void> _persist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final raw = jsonEncode(_documents.map((d) => d.toJson()).toList());
+      final raw = jsonEncode(
+          [..._documents.map((d) => d.toJson()), ..._unreadable]);
       await prefs.setString(_prefsKey, raw);
       onChanged?.call();
     } catch (e) {
@@ -254,9 +279,13 @@ class DocumentService extends ChangeNotifier {
       '${DateTime.now().microsecondsSinceEpoch}_${_documents.length}';
 
   String _extensionFor(String path) {
-    final i = path.lastIndexOf('.');
-    if (i == -1 || i == path.length - 1) return 'jpg';
-    return path.substring(i + 1).toLowerCase();
+    // Only the file name: a dot in a folder name ("com.app/cache/abc") is
+    // not an extension.
+    final name = path.split(RegExp(r'[/\\]')).last;
+    final i = name.lastIndexOf('.');
+    if (i == -1 || i == name.length - 1) return 'jpg';
+    final ext = name.substring(i + 1).toLowerCase();
+    return RegExp(r'^[a-z0-9]{1,5}$').hasMatch(ext) ? ext : 'jpg';
   }
 
   /// Pick an image from [source] (camera or gallery), copy it into the app

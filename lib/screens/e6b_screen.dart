@@ -123,7 +123,10 @@ class _NumField extends StatelessWidget {
       keyboardType:
           TextInputType.numberWithOptions(decimal: true, signed: signed),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.\-]')),
+        // Comma decimals (de, fr, es… keypads) are kept and read as a point;
+        // a minus sign only where the value can really be negative.
+        FilteringTextInputFormatter.allow(
+            signed ? RegExp(r'[0-9.,\-]') : RegExp(r'[0-9.,]')),
       ],
       style: AppType.sans(color: Sky.ink, fontSize: 15),
       cursorColor: _kCyan,
@@ -323,10 +326,10 @@ class _WindTriangleTabState extends State<_WindTriangleTab> {
 
   @override
   Widget build(BuildContext context) {
-    final tc = double.tryParse(_course.text);
-    final tas = double.tryParse(_tas.text);
-    final wd = double.tryParse(_windDir.text);
-    final ws = double.tryParse(_windSpd.text);
+    final tc = _parse(_course.text);
+    final tas = _parse(_tas.text);
+    final wd = _parse(_windDir.text);
+    final ws = _parse(_windSpd.text);
 
     double? wca;
     double? heading;
@@ -341,7 +344,8 @@ class _WindTriangleTabState extends State<_WindTriangleTab> {
         wca = _rad2deg(wcaRad);
         heading = _norm360(tc + wca);
         gs = tas * math.cos(wcaRad) - ws * math.cos(rel);
-        if (gs < 0) gs = 0; // wind exceeds TAS along track
+        // A headwind stronger than TAS: no ground track is possible.
+        if (gs <= 0) wca = heading = gs = null;
       }
     }
 
@@ -437,9 +441,9 @@ class _CrosswindTabState extends State<_CrosswindTab> {
 
   @override
   Widget build(BuildContext context) {
-    final rwy = double.tryParse(_rwy.text);
-    final wd = double.tryParse(_windDir.text);
-    final ws = double.tryParse(_windSpd.text);
+    final rwy = _parse(_rwy.text);
+    final wd = _parse(_windDir.text);
+    final ws = _parse(_windSpd.text);
 
     double? cross;
     double? along; // + headwind, - tailwind
@@ -554,17 +558,18 @@ class _TasDaTabState extends State<_TasDaTab> {
 
   @override
   Widget build(BuildContext context) {
-    final elev = double.tryParse(_elev.text);
-    final oat = double.tryParse(_oat.text);
-    final alt = double.tryParse(_alt.text);
-    final cas = double.tryParse(_cas.text);
+    final elev = _parse(_elev.text);
+    final oat = _parse(_oat.text);
+    final alt = _parse(_alt.text);
+    final cas = _parse(_cas.text);
 
     double? pa;
     double? isaTemp;
     double? da;
     double? tas;
 
-    if (elev != null && alt != null) {
+    // 25–33 inHg covers every real altimeter setting; 1013 is hPa, not inHg.
+    if (elev != null && alt != null && alt >= 25 && alt <= 33) {
       pa = elev + (29.92 - alt) * 1000.0;
       isaTemp = 15.0 - 2.0 * (pa / 1000.0);
       if (oat != null) {
@@ -674,9 +679,9 @@ class _TimeSpeedDistanceTabState extends State<_TimeSpeedDistanceTab> {
 
   @override
   Widget build(BuildContext context) {
-    final gs = double.tryParse(_speed.text);
-    final dist = double.tryParse(_distance.text);
-    final timeMin = double.tryParse(_time.text);
+    final gs = _parse(_speed.text);
+    final dist = _parse(_distance.text);
+    final timeMin = _parse(_time.text);
 
     double? resSpeed;
     double? resDist;
@@ -701,7 +706,12 @@ class _TimeSpeedDistanceTabState extends State<_TimeSpeedDistanceTab> {
     }
 
     String hhmm(double? minutes) {
-      if (minutes == null || minutes.isNaN || minutes.isInfinite) return '—';
+      if (minutes == null ||
+          minutes.isNaN ||
+          minutes.isInfinite ||
+          minutes < 0) {
+        return '—';
+      }
       final total = minutes.round();
       final h = total ~/ 60;
       final m = total % 60;
@@ -814,9 +824,9 @@ class _FuelTabState extends State<_FuelTab> {
 
   @override
   Widget build(BuildContext context) {
-    final burn = double.tryParse(_burn.text);
-    final timeMin = double.tryParse(_time.text);
-    final fuel = double.tryParse(_fuel.text);
+    final burn = _parse(_burn.text);
+    final timeMin = _parse(_time.text);
+    final fuel = _parse(_fuel.text);
 
     double? resFuel;
     double? resTimeMin;
@@ -841,7 +851,12 @@ class _FuelTabState extends State<_FuelTab> {
     }
 
     String hhmm(double? minutes) {
-      if (minutes == null || minutes.isNaN || minutes.isInfinite) return '—';
+      if (minutes == null ||
+          minutes.isNaN ||
+          minutes.isInfinite ||
+          minutes < 0) {
+        return '—';
+      }
       final total = minutes.round();
       final h = total ~/ 60;
       final m = total % 60;
@@ -1012,7 +1027,7 @@ class _ConversionTabState extends State<_ConversionTab> {
   Widget build(BuildContext context) {
     final category = _conversionCategories[_categoryIndex];
     final units = category.units;
-    final value = double.tryParse(_input.text);
+    final value = _parse(_input.text);
 
     double? result;
     if (value != null) {
@@ -1227,4 +1242,11 @@ class _SolveSelector<T> extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Reads a typed number, accepting a comma as the decimal mark ("29,92").
+double? _parse(String text) {
+  final t = text.trim().replaceAll(',', '.');
+  if (t.isEmpty || '.'.allMatches(t).length > 1) return null;
+  return double.tryParse(t);
 }

@@ -155,6 +155,9 @@ PrivatePilotProgress privatePilotProgress({
   final today = dateOnly(now);
 
   for (final e in entries) {
+    // 61.109(a) counts experience already logged: a future-dated entry
+    // (a typo, or a booked lesson) counts for nothing yet.
+    if (e.day.isAfter(today)) continue;
     total += e.totalTime;
     if (e.categoryClass.trim().isEmpty) unclassed++;
     if (!_singleEngineAirplane(e)) continue;

@@ -229,11 +229,17 @@ MinimumsResult checkAgainst({
       state = lim == null ? CheckState.notSet : CheckState.unknown;
       observed = 'No runway alignment from AWC';
     } else {
-      final x = rw.worstCrosswindKt;
+      // Compare the real value, not the rounded one: 10.4 kt is over a
+      // 10 kt limit. Show a decimal when whole knots would hide that.
+      final x = rw.worstCrosswind;
+      String kt(double v) =>
+          lim != null && v > lim && v.round() <= lim
+              ? v.toStringAsFixed(1)
+              : '${v.round()}';
       final gustPart = rw.gustCrosswindKt == null
           ? ''
-          : ', gust ${rw.gustCrosswindKt} kt';
-      observed = '${rw.crosswindKt} kt$gustPart on ${rw.variable ? 'any runway' : rw.end.name}';
+          : ', gust ${kt(rw.gustCrosswind!)} kt';
+      observed = '${kt(rw.crosswind)} kt$gustPart on ${rw.variable ? 'any runway' : rw.end.name}';
       detail = rw.variable
           ? 'Wind variable: treated as full crosswind on every runway.'
           : rw.gustHeadwind == null
@@ -252,7 +258,7 @@ MinimumsResult checkAgainst({
       state: state,
       detail: detail,
       outsidePhrase: state == CheckState.outside
-          ? 'crosswind ${rw!.worstCrosswindKt} kt on '
+          ? 'crosswind ${rw!.worstCrosswind > lim! && rw.worstCrosswindKt <= lim ? rw.worstCrosswind.toStringAsFixed(1) : rw.worstCrosswindKt} kt on '
               '${rw.variable ? 'any runway' : rw.end.name} > your $lim kt'
           : null,
     ));
