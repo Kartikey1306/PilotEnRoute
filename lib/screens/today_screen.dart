@@ -746,8 +746,9 @@ class _TodayScreenState extends State<TodayScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
           child: Text(
-            'Not checked here: type ratings, endorsements other than student '
-            'solo, and the 61.57(e) exceptions.',
+            'Type ratings are checked only when Type rating is on. Not '
+            'checked here: endorsements other than student solo, and the '
+            '61.57(e) exceptions.',
             style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
           ),
         ),
