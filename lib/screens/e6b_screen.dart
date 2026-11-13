@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../core/e6b/descent.dart';
 import '../ui/theme.dart';
 import '../ui/widgets.dart';
 import 'package:intl/intl.dart';
@@ -10,7 +11,8 @@ import 'package:intl/intl.dart';
 ///
 /// Provides a set of real, live-updating aviation calculators:
 /// wind triangle, crosswind/headwind components, true airspeed & density
-/// altitude, time-speed-distance, fuel planning, and unit conversions.
+/// altitude, time-speed-distance, fuel planning, descent planning, and unit
+/// conversions.
 class E6BScreen extends StatefulWidget {
   const E6BScreen({super.key});
 
@@ -27,7 +29,7 @@ class _E6BScreenState extends State<E6BScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
   }
 
   @override
@@ -51,6 +53,7 @@ class _E6BScreenState extends State<E6BScreen>
             Tab(text: 'TAS / DA'),
             Tab(text: 'TIME-SPD-DIST'),
             Tab(text: 'FUEL'),
+            Tab(text: 'DESCENT'),
             Tab(text: 'CONVERT'),
           ],
         ),
@@ -63,6 +66,7 @@ class _E6BScreenState extends State<E6BScreen>
           _TasDaTab(),
           _TimeSpeedDistanceTab(),
           _FuelTab(),
+          _DescentTab(),
           _ConversionTab(),
         ],
       ),
@@ -941,6 +945,186 @@ class _FuelTabState extends State<_FuelTab> {
 
 // ---------------------------------------------------------------------------
 // 6. Unit conversions
+// ---------------------------------------------------------------------------
+// Descent planner
+// ---------------------------------------------------------------------------
+
+enum _DescentBy { angle, rate }
+
+class _DescentTab extends StatefulWidget {
+  const _DescentTab();
+
+  @override
+  State<_DescentTab> createState() => _DescentTabState();
+}
+
+class _DescentTabState extends State<_DescentTab> {
+  final _from = TextEditingController();
+  final _to = TextEditingController();
+  final _gs = TextEditingController();
+  final _angle = TextEditingController(text: '3');
+  final _rate = TextEditingController(text: '500');
+
+  _DescentBy _by = _DescentBy.angle;
+
+  @override
+  void dispose() {
+    _from.dispose();
+    _to.dispose();
+    _gs.dispose();
+    _angle.dispose();
+    _rate.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final from = _parse(_from.text);
+    final to = _parse(_to.text);
+    final gs = _parse(_gs.text);
+    final angle = _parse(_angle.text);
+    final rate = _parse(_rate.text);
+
+    DescentPlan? plan;
+    String? problem;
+    final byOk = _by == _DescentBy.angle ? angle != null : rate != null;
+    if (from != null && to != null && gs != null && byOk) {
+      final r = planDescent(
+        fromFt: from,
+        toFt: to,
+        groundspeedKt: gs,
+        angleDeg: _by == _DescentBy.angle ? angle : null,
+        rateFpm: _by == _DescentBy.rate ? rate : null,
+      );
+      plan = r.plan;
+      problem = switch (r.problem) {
+        DescentProblem.notBelow => 'The target altitude must be below the '
+            'altitude you are at.',
+        DescentProblem.noGroundspeed => 'Enter a groundspeed above 0.',
+        DescentProblem.badAngle => 'Use a descent angle above 0° and up to '
+            '10° (3° is typical).',
+        DescentProblem.badRate => 'Enter a descent rate above 0 fpm.',
+        null => null,
+      };
+    }
+
+    String mmss(double? minutes) {
+      if (minutes == null || minutes.isNaN || minutes.isInfinite) return '—';
+      final s = (minutes * 60).round();
+      return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+    }
+
+    return _TabBody(
+      children: [
+        _Panel(
+          title: 'DESCENT PLANNER',
+          children: [
+            _NumField(
+              controller: _from,
+              label: 'Current Altitude',
+              suffix: 'ft',
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            _NumField(
+              controller: _to,
+              label: 'Target Altitude',
+              suffix: 'ft',
+              signed: true,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            _NumField(
+              controller: _gs,
+              label: 'Groundspeed',
+              suffix: 'kt',
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 16),
+            _SolveSelector<_DescentBy>(
+              options: const {
+                _DescentBy.angle: 'BY ANGLE',
+                _DescentBy.rate: 'BY RATE',
+              },
+              value: _by,
+              onChanged: (v) => setState(() => _by = v),
+            ),
+            const SizedBox(height: 12),
+            if (_by == _DescentBy.angle)
+              _NumField(
+                controller: _angle,
+                label: 'Descent Angle',
+                suffix: '°',
+                onChanged: (_) => setState(() {}),
+              )
+            else
+              _NumField(
+                controller: _rate,
+                label: 'Descent Rate',
+                suffix: 'fpm',
+                onChanged: (_) => setState(() {}),
+              ),
+          ],
+        ),
+        _ResultCard(
+          title: 'TOP OF DESCENT',
+          children: [
+            _ResultTile(
+              label: 'Start down before the fix',
+              value: _fmt(plan?.distanceNm, _num1, suffix: ' nm'),
+              big: true,
+            ),
+            _ResultTile(
+              label: _by == _DescentBy.angle
+                  ? 'Descent rate to hold'
+                  : 'Descent rate',
+              value: _fmt(plan?.rateFpm, _num0, suffix: ' fpm'),
+              color: _kAmber,
+              big: _by == _DescentBy.angle,
+            ),
+            _ResultTile(
+              label: 'Time to descend',
+              value: mmss(plan?.minutes),
+              color: Sky.ink,
+            ),
+            _ResultTile(
+              label: 'Altitude to lose',
+              value: _fmt(plan?.altitudeToLose, _num0, suffix: ' ft'),
+              color: Sky.ink,
+            ),
+            _ResultTile(
+              label: 'Path angle',
+              value: _fmt(plan?.angleDeg, _num1, suffix: '°'),
+              color: Sky.ink,
+            ),
+            _ResultTile(
+              label: 'Gradient',
+              value: _fmt(plan?.gradientFtPerNm, _num0, suffix: ' ft/nm'),
+              color: Sky.ink,
+            ),
+            if (problem != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(problem,
+                    key: const Key('descent-problem'),
+                    style: AppType.sans(color: _kRed, fontSize: 13)),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Rule of thumb: a 3° path is about groundspeed × 5 fpm, '
+                'and about 3 nm for every 1,000 ft. Add distance for any '
+                'slowdown before the fix.',
+                style: AppType.sans(color: Sky.muted, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 class _ConvUnit {
